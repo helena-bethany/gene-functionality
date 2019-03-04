@@ -88,9 +88,9 @@
 
 ### RandomForest
 
-* [**randomforestx.R:**](randomforestx.R) runs random forest for x number of times and exports the appropriate information from it.
+* [**randomforestx.R:**](randomforest.R) runs random forest for x number of times and exports the appropriate information from it.
   * **Arguments:** location of original data, name of importance file, name of errors file, name of prediction file, number of time to repeat random forest.
   * **Output:** Three CSV files corresponding to the importance of predictors across x models, error rates for predicting functionality across x models and the predictions made summed for all x models.
-* [**rftest.R:**](rftest.R) runs random forest x number of times with only a subset of the dataset being used as the testData (ie: can split into predicting specific types of ncRNA).
+* [**rftest.R:**](RFtest.R) runs random forest x number of times with only a subset of the dataset being used as the testData (ie: can split into predicting specific types of ncRNA).
   * **Arguments:** location of original data that isn’t part of the testData, location of data that is part of the testData (70% will also be included in the trainData), name of prediction file, number of times to repeat random forest.
   * **Output:** One CSV file corresponding to the summed predictions made for all x models.
