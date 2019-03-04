@@ -5,7 +5,7 @@
 * [**RNAcentral.sh:**](RNAcentral.sh) reformats the RNAcentral FASTA file and obtains the chromosome coordinates for each sequence.
   * Also generates the random sequences for the null dataset.
   * **Arguments:** $1 is the downloaded FASTA file from RNAcentral and $2 is the name you want to give the dataset (eg: 181203dataset).
-  * **Additional Scripts:** [coordinates2.py](coordinate2.py), [RfamCM.py](RfamCM.py) and [random_sequences.py](random_sequences.py).
+  * **Additional Scripts:** [coordinates2.py](coordinates2.py), [RfamCM.py](RfamCM.py) and [random_sequences.py](random_sequences.py).
   * **Additional Files:** Homo_sapiens.GRCh38.bed and GRCh38_genome.csv
   * **Additional Functions:** fasta_formatter and cmscan
   * **Output:** $2_final.csv is the converted dataset for RNAcentral data and $2_spare is the null dataset based off the RNAcentral data.
@@ -42,11 +42,12 @@
   * **Argument:** $1 is the name of the dataset file including location 
   * **Additional Functions:** tabix
   * **Additional Files:** downloaded VCF files should be in the folder FASTA.
-  * **R code:** library(PopGenome)
-                genome.class <- readData("FASTA", format="VCF")
-                genome.class <- neutrality.stats(genome.class)
-                dataset <- get.neutrality(genome.class)[[1]]
-                write.csv(dataset, "name.csv")
+  * **R code:** 
+    - library(PopGenome)
+    - genome.class <- readData("FASTA", format="VCF")
+    - genome.class <- neutrality.stats(genome.class)
+    - dataset <- get.neutrality(genome.class)[[1]]
+    - write.csv(dataset, "name.csv")            
   * **Functional Values:** Tajima’s D, Fu Li’s F and D, number of SNPs and average for 1000 genomes data (number of segregating sites).
 
 ### Transitions and Transversions
