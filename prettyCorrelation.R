@@ -1,5 +1,3 @@
-#Copying parts of Paul's Script = not so fun times
-
 #library(MASS)
 #library(RColorBrewer)
 #library(fields)
