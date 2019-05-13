@@ -27,25 +27,25 @@ with open(sys.argv[1], 'r') as csvFile:			#Converted fasta to csv file from RNAc
 			info = info[1]
 			info = info.split(')')
 			info = info[0]
-			info = info.replace(',',';')
+			info = info.split(',')
+			info = info[0]
+			info = info.split(' ')
+			info = info[0]
 		else:
 			info = info.split('(')
 			num = len(info)
 			info = info[num-1]
 			info = info.split(')')
 			info = info[0]
-			info = info.replace(',',';')
+			info = info.split(',')
+			info = info[0]
+			info = info.split(' ')
+			info = info[0]
 		n = n + 1
 		names.append(info)
-		#t.write(ID)
-		#t.write('\n')
-		#break
 
 csvFile.close()
 print("There were",n,"ncRNA in the dataset.")
-#print(IDs[0])
-#print(names[0])
-#print(sequence[0])
 
 all_coordinates = []                                    #List of containing information from above file
 
@@ -55,7 +55,6 @@ with open('Homo_sapiens.GRCh38.bed') as file:           #HGNC file containing ch
 	chromStart = []
 	chromEnd = []
 	rcIDs = []
-	#databases = []
 	for line in file:
 		content = []
 		content.append(line.strip().split())
@@ -63,26 +62,11 @@ with open('Homo_sapiens.GRCh38.bed') as file:           #HGNC file containing ch
 		chr = content[0][0]
 		chrStart = content[0][1]
 		chrEnd = content[0][2]
-		#db = content[0][14]
-		#db = db.split(',')
-		#all = content[0][0:4]
-		#all = str(all)
-		#all = all.split("'")
-		#data = ''
-		#allrcID = []
-		#for word in all:
-		#	if word == '[' or word == ']' or ',' in word:
-		#		pass
-		#	else:
-		#		data += word+','
-		if rcID in IDs: #and 'HGNC' in db:
-			#all_coordinates.append(data)
-			#allrcID.append(rcID)
+		if rcID in IDs:
 			chrom.append(chr)
 			chromStart.append(chrStart)
 			chromEnd.append(chrEnd)
 			rcIDs.append(rcID)
-			#databases.append(db)
 			m = m + 1
 			#break
 		else:
@@ -91,15 +75,10 @@ with open('Homo_sapiens.GRCh38.bed') as file:           #HGNC file containing ch
 
 file.close()
 print("There were",m,"coordinates found.")
-#print(chrom)
-#print(chromStart)
-#print(chromEnd)
-#print(rcIDs)
-#print(isinstance(chr,str))
-#print(all_coordinates[0])
-#print(data)
 
-f = open(sys.argv[2], 'w')                              #File contains location of F and NF ncRNA from dataset							#Count for the dataset info
+f = open(sys.argv[2], 'w')                              #File contains location of F and NF ncRNA from dataset	
+fa = open(sys.argv[3], 'w')							
+							#Count for the dataset info
 b = 0							#Count for the coordinates info
 
 f.write('ncRNA,RNAcentral ID,Copies,Chromosome,Start,End,Sequence\n')
@@ -115,17 +94,27 @@ for id in rcIDs:
 					copies += 1
 				else:
 					pass
-			data = ''
-			data += names[a]+','
-			data += IDs[a]+','
-			data += str(copies)+','
-			data += chrom[b]+','
-			data += chromStart[b]+','
-			data += chromEnd[b]+','
-			data += sequence[a]+','
-			#data += str(databases[b])
-			f.write(data)
-			f.write('\n')
+			if IDs[a] in check:
+				pass
+			else:
+				data = ''
+				data += names[a]+','
+				data += IDs[a]+','
+				#data += str(copies)+','
+				data += chrom[b]+','
+				data += chromStart[b]+','
+				data += chromEnd[b]+','
+				data += sequence[a]+','
+				#data += str(databases[b])
+				f.write(data)
+				f.write('\n')
+				data2 = '>'
+				data2 += IDs[a]
+				fa.write(data2)
+				fa.write('\n')
+				fa.write(sequence[a])
+				fa.write('\n')
+			check.append(IDs[a])
 			a = a + 1
 			#break
 		else:
@@ -135,6 +124,7 @@ for id in rcIDs:
 
 
 f.close()
+fa.close()
 #print(a)
 #print(b)
 
