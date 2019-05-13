@@ -7,7 +7,11 @@
 2. Download the GRCh38 genome from NCBI and then reformat to a csv so that it can be easily read in python. The scaffolds that aren't associated with a main chromosome should also be removed.
 
 ```
-Insert Code
+#Convert from FASTA to tabular
+fasta_formatter -i GRCh38_latest_genomic.fna -o GRCh38_part1.csv -t
+
+#Remove scaffolds
+grep "NC_" GRCh38_part1.csv > GRCh38_genome.csv
 ```
 
 3. Using the files downloaded from RNAcental as input, run in **RNAcentral.sh** to obtain a CSV file with the sequences for the training and control datasets, as well as the CM and e-value scores from CMscan.
