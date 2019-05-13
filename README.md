@@ -122,10 +122,10 @@ makeblastdb -in GCF_000001405.38_GRCh38.p12_genomic.fna -dbtype nucl -parse_seqi
 
 ### Transcription
 
-1. Download cell line and differentiated cell total RNA-seq data from ENCODE.
+1. Download cell line and differentiated cell total RNA-seq data from ENCODE. Note that Dataset and BAM file IDs for the same sample are different.
 
-* Cell Lines: H7-hESC (ENCFF089EWC), HepG2 (ENCFF067CVP), GM12878 (ENCFF893HSY), K562 (ENCFF796BVP).
-* Differentiated Cells: smooth muscle cell from H9 (ENCFF369DYD), hepatocyte from H9 (ENCFF907AIK), neural progenitor cell from H9 (ENCFF766ESM), myocyte from LHCN-M2 (ENCFF722EAR), bipolar neuron from GM23338 (ENCFF713UNS), myotube from skeletal muscle myoblast (ENCFF178TTA), hematopoietic multipotent progenitor cell (ENCFF065MVD) and cardiac muscle from RUES2 (ENCFF475WLJ).
+* Cell Lines: H7-hESC ([ENCFF089EWC](https://www.encodeproject.org/files/ENCFF089EWC/)), HepG2 ([ENCFF067CVP](https://www.encodeproject.org/files/ENCFF067CVP/)), GM12878 ([ENCFF893HSY](https://www.encodeproject.org/files/ENCFF893HSY/)), K562 ([ENCFF796BVP](https://www.encodeproject.org/files/ENCFF796BVP/)).
+* Differentiated Cells: smooth muscle cell from H9 ([ENCFF369DYD](https://www.encodeproject.org/files/ENCFF369DYD/)), hepatocyte from H9 ([ENCFF907AIK](https://www.encodeproject.org/files/ENCFF907AIK/)), neural progenitor cell from H9 ([ENCFF766ESM](https://www.encodeproject.org/files/ENCFF766ESM/)), myocyte from LHCN-M2 ([ENCFF722EAR](https://www.encodeproject.org/files/ENCFF722EAR/)), bipolar neuron from GM23338 ([ENCFF713UNS](https://www.encodeproject.org/files/ENCFF713UNS/)), myotube from skeletal muscle myoblast ([ENCFF178TTA](https://www.encodeproject.org/files/ENCFF178TTA/)), hematopoietic multipotent progenitor cell ([ENCFF065MVD](https://www.encodeproject.org/files/ENCFF065MVD/)) and cardiac muscle from RUES2 ([ENCFF475WLJ](https://www.encodeproject.org/files/ENCFF475WLJ/)).
 
 2. Index the downloaded bam files.
 
