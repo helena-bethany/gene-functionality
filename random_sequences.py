@@ -44,7 +44,7 @@ with open(sys.argv[2], 'r') as csvFile:                 #Converted fasta to csv 
 		for number in end:
 			if count == number:
 				sequence = ''
-				left = count + 1000
+				left = count + 20000
 				right = left + 150
 				sequence += chr[left:right]
 				e.write(sequence)
@@ -55,7 +55,7 @@ with open(sys.argv[2], 'r') as csvFile:                 #Converted fasta to csv 
 		for number in start:
 			if count == number:
 				sequence = ''
-				right = count - 1000
+				right = count - 20000
 				left = right - 150		#150 is the average snRNA length
 				sequence += chr[left:right]
 				s.write(sequence)
