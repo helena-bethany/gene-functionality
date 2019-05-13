@@ -118,7 +118,12 @@ do
     bottom=$(calc $a+$b+2)
     ratio=$(calc $top/$bottom)
     #echo $average
-    echo $a,$b,$ratio,$min,$max,$average > line
+    if (( $(echo "$ratio == 0.5" | bc -l) ))
+    then
+	echo $a,$b,0,0,$max,$average > line
+    else
+	echo $a,$b,$ratio,$min,$max,$average > line
+    fi
     cat line >> freqsummary.csv
 
 done
