@@ -43,7 +43,7 @@ do
 done
 
 cmbuild RNAfinal.cm final.stk > $2cmbuild.txt
-echo nseq, effnseq, CM, HMM > $2cmbuildfinal.txt
+echo nseq, effnseq, CM-build, HMM-build > $2cmbuildfinal.txt
 grep -v '#' $2cmbuild.txt | tr -s " " | cut -d ' ' -f 3,4,5,10,11 | tr ' ' ',' >> $2cmbuild1.txt
 var=1
 for line in $(cat $2cmbuild1.txt)
