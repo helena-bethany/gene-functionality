@@ -25,12 +25,26 @@ grep "NC_" GRCh38_part1.csv > GRCh38_genome.csv
 
 ### Conservation of Sequence
 
-1. Use **UCSCtables.sh** to extract the maximum and mean phyloP and PhastCons scores from UCSC using mysql. This is based on the snp151 data available on UCSC. Run this first as this will take the longest to run.
+1. Use **UCSCtables.sh** to extract the SNP data from UCSC using mysql. This is based on the snp151 data available on UCSC. Run this first as this will take the longest to run.
  
 * [**UCSCtables.sh:**](UCSCtables.sh)
   * **Arguments**: $1 is the name of the dataset file (including location to the file) and $2 is the name of the final file (eg: 181218datasetcons)
   * **Additional Functions:** mysql.
   * **Output:** Currently a seperate file ($2.csv) due to the length of time taken to run the code.
+  
+2. To obtain the phastCons and phyloP conservation scores, use the [UCSC table browser](http://genome.ucsc.edu/cgi-bin/hgTables?hgsid=701273921_eML3CJEnXm4rsnQmqAuYnNHkZVkV) and grab the columns of interest (maximum and average). **Note:** doing this is much faster and easier than downloading them via mysql.
+
+```
+#Reformat chromosome coordinates for input
+grep -v 'Chromosome' file.csv | cut -d ',' -f 1,2,3 | tr ',' ' ' | perl -lane '{print "$F[0]:$F[1]-$F[2]"}'
+
+#Go onto UCSC table browser and input the following
+group: Comparitive Genomes
+track: Conservation
+table: Cons 100 Verts (phyloP100 way) or Cons 100 Verts (phastCons100way)
+region: define regions > submit chromosome coordinates (note only 1000 at a time)
+button to click: Summary/Statistics
+```
 
 ### Population Statistics
 
