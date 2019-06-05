@@ -4,6 +4,8 @@
 
 1. Download ncRNA from [RNAcentral](https://rnacentral.org/search?q=TAXONOMY:%229606%22%20AND%20expert_db:%22HGNC%22), filtering for _Homo sapiens_ and HGNC database, in the FASTA format. Also download the corresponding [chromosome coordinates file](ftp://ftp.ebi.ac.uk/pub/databases/RNAcentral/current_release/genome_coordinates/bed/). Don't use lncRNA, rRNA or precurser RNA to generate the training dataset. 
 
+https://rnacentral.org/search?q=HGNC%20AND%20NOT%20rna_type:%22lncRNA%22%20%20AND%20NOT%20rna_type:%22rRNA%22%20%20AND%20NOT%20rna_type:%22precursor%20RNA%22
+
 2. Download the GRCh38 genome from NCBI and then reformat to a csv so that it can be easily read in python. The scaffolds that aren't associated with a main chromosome should also be removed.
 
 ```
