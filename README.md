@@ -3,8 +3,11 @@
 ### Generation of the dataset
 
 1. Download ncRNA from [RNAcentral](https://rnacentral.org/search?q=TAXONOMY:%229606%22%20AND%20expert_db:%22HGNC%22), filtering for _Homo sapiens_ and HGNC database, in the FASTA format. Also download the corresponding [chromosome coordinates file](ftp://ftp.ebi.ac.uk/pub/databases/RNAcentral/current_release/genome_coordinates/bed/). Don't use lncRNA, rRNA or precurser RNA to generate the training dataset. 
+
 ncRNA:
 https://rnacentral.org/search?q=HGNC%20AND%20NOT%20rna_type:%22lncRNA%22%20%20AND%20NOT%20rna_type:%22rRNA%22%20%20AND%20NOT%20rna_type:%22precursor%20RNA%22
+
+
 ncRNA chromosomal coordinates:
 https://rnacentral.org/search?q=HGNC%20AND%20NOT%20rna_type:%22lncRNA%22%20%20AND%20NOT%20rna_type:%22rRNA%22%20%20AND%20NOT%20rna_type:%22precursor%20RNA%22%20AND%20has_genomic_coordinates:%22True%22
 
