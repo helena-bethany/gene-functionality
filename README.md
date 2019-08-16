@@ -32,16 +32,22 @@ grep "NC_" GRCh38_part1.csv > GRCh38_genome.csv
   * **Output:** $2_final.csv is the converted dataset for RNAcentral data and $2_spare is the null dataset based off the RNAcentral data.
 
 ### Conservation of Sequence
-1. Install bedtools
-2. run SCRIPT
-##Ignore all this
-1. Use **UCSCtables.sh** to extract the SNP data from UCSC using mysql. This is based on the snp151 data available on UCSC. Run this first as this will take the longest to run.
- 
-* [**UCSCtables.sh:**](UCSCtables.sh)
-  * **Arguments**: $1 is the name of the dataset file (including location to the file) and $2 is the name of the final file (eg: 181218datasetcons)
-  * **Additional Functions:** mysql.
-  * **Output:** Currently a seperate file ($2.csv) due to the length of time taken to run the code.
-  
+
+1. The file snp151_trimmed_sorted.bed is provided but the code for generating it is as follows: 
+Download snp151.txt.gz from ftp://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/
+
+```
+gunzip snp151.txt.gz
+grep  -v chr[A-Z]_* I think >snp151_no_alts
+grep -v Chromosome rnacentraloutput_FINAL.csv |  cut -f 3,4,5 -d "," | tr ',' '\t' >rnacentraloutput_FINAL.bed
+cut -f 2,3,4 snp151_no_alts >snp151_trimmed.bed
+sort -k1,1 -k2,2n snp151_trimmed.bed > snp151_trimmed_sorted.bed 
+sort -k1,1 -k2,2n rnacentraloutput_FINAL.bed > rnacentraloutput_FINAL_sorted.bed 
+
+awk '$1="chr"$1' rnacentraloutput_FINAL_sorted.bed | tr ' ' '\t' >rnacentraloutput_FINAL_sorted1.bed 
+bedtools intersect -c -a rnacentraloutput_FINAL_sorted1.bed -b snp151_trimmed_sorted.bed -wa -sorted >rnacentraloutput_snp_intersection
+```
+
 2. To obtain the phastCons and phyloP conservation scores, use the [UCSC table browser](http://genome.ucsc.edu/cgi-bin/hgTables?hgsid=701273921_eML3CJEnXm4rsnQmqAuYnNHkZVkV) and grab the columns of interest (maximum and average). **Note:** doing this is much faster and easier than downloading them via mysql.
 
 ```
