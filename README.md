@@ -7,12 +7,9 @@
 ncRNA:
 https://rnacentral.org/search?q=HGNC%20AND%20NOT%20rna_type:%22lncRNA%22%20%20AND%20NOT%20rna_type:%22rRNA%22%20%20AND%20NOT%20rna_type:%22precursor%20RNA%22
 
+ncRNA chromosomal coordinates: ftp://ftp.ebi.ac.uk/pub/databases/RNAcentral/current_release/genome_coordinates/bed/homo_sapiens.GRCh38.bed.gz
 
-ncRNA chromosomal coordinates:
-https://rnacentral.org/search?q=HGNC%20AND%20NOT%20rna_type:%22lncRNA%22%20%20AND%20NOT%20rna_type:%22rRNA%22%20%20AND%20NOT%20rna_type:%22precursor%20RNA%22%20AND%20has_genomic_coordinates:%22True%22
-
-
-2. Download the GRCh38 genome from NCBI in FASTA format, and their corresponding BED files. Then reformat to a csv so that it can be easily read in python. The scaffolds that aren't associated with a main chromosome should also be removed.
+2. Download the [GRCh38 genome](https://www.ncbi.nlm.nih.gov/assembly/GCF_000001405.38/) from NCBI in FASTA format, and their corresponding BED files. Then reformat to a csv so that it can be easily read in python. The scaffolds that aren't associated with a main chromosome should also be removed.
 
 ```
 #Convert from FASTA to tabular
