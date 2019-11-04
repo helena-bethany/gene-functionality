@@ -239,8 +239,8 @@ do
     count=$(($count+1))
 done
 
-(paste -d ',' labels.txt status.txt $d-combined.csv) > $d-ncrna-dataset.csv
-echo $d-ncrna-dataset.csv completed
+(paste -d ',' labels.txt status.txt $d-combined.csv) > $d-ncrna-dataset-1.csv
+echo $d-ncrna-dataset-1.csv completed
 echo
 
 #####################################################################
