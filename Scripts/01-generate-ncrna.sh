@@ -147,19 +147,19 @@ do
     if (( $(echo "$rank == 1" | bc -l) ))
     then
 	#Extract relevant information from cmscan output
-	rna=$(echo $line | tr -s ' ' | cut -d ' ' -f 2 )
-	id=$(echo $line | tr -s ' ' | cut -d ' ' -f 4 )
-	cm=$(echo $line | tr -s ' ' | cut -d ' ' -f 17 )
-	evalue=$(echo $line | tr -s ' ' | cut -d ' ' -f 18 )
+	rna_left=$(echo $line | tr -s ' ' | cut -d ' ' -f 2 )
+	id_left=$(echo $line | tr -s ' ' | cut -d ' ' -f 4 )
+	cm_left=$(echo $line | tr -s ' ' | cut -d ' ' -f 17 )
+	evalue_left=$(echo $line | tr -s ' ' | cut -d ' ' -f 18 )
     
 	#Extract corresponding information from coords output
-	chr=$( grep $id $d-coords.csv | cut -d ',' -f 1 | cut -c4-)
-	start=$( grep $id $d-coords.csv | cut -d ',' -f 2 )
-	end=$( grep $id $d-coords.csv | cut -d ',' -f 3 )
-	sequence=$( grep $id $d-coords.csv | cut -d ',' -f 4 )
+	chr_left=$( grep $id $d-coords.csv | cut -d ',' -f 1 | cut -c4-)
+	start_left=$( grep $id $d-coords.csv | cut -d ',' -f 2 )
+	end_left=$( grep $id $d-coords.csv | cut -d ',' -f 3 )
+	sequence_left=$( grep $id $d-coords.csv | cut -d ',' -f 4 )
 
 	#Add information to final.csv output
-	echo $chr,$start,$end,$cm,$evalue,$sequence >> $d-final-left.csv 
+	echo $chr_left,$start_left,$end_left,$cm_left,$evalue_left,$sequence_left >> $d-final-left.csv 
 	
     else
 	:
@@ -186,19 +186,19 @@ do
     if (( $(echo "$rank == 1" | bc -l) ))
     then
 	#Extract relevant information from cmscan output
-	rna=$(echo $line | tr -s ' ' | cut -d ' ' -f 2 )
-	id=$(echo $line | tr -s ' ' | cut -d ' ' -f 4 )
-	cm=$(echo $line | tr -s ' ' | cut -d ' ' -f 17 )
-	evalue=$(echo $line | tr -s ' ' | cut -d ' ' -f 18 )
+	rna_right=$(echo $line | tr -s ' ' | cut -d ' ' -f 2 )
+	id_right=$(echo $line | tr -s ' ' | cut -d ' ' -f 4 )
+	cm_right=$(echo $line | tr -s ' ' | cut -d ' ' -f 17 )
+	evalue_right=$(echo $line | tr -s ' ' | cut -d ' ' -f 18 )
     
 	#Extract corresponding information from coords output
-	chr=$( grep $id $d-coords.csv | cut -d ',' -f 1 | cut -c4-)
-	start=$( grep $id $d-coords.csv | cut -d ',' -f 2 )
-	end=$( grep $id $d-coords.csv | cut -d ',' -f 3 )
-	sequence=$( grep $id $d-coords.csv | cut -d ',' -f 4 )
+	chr_right=$( grep $id $d-coords.csv | cut -d ',' -f 1 | cut -c4-)
+	start_right=$( grep $id $d-coords.csv | cut -d ',' -f 2 )
+	end_right=$( grep $id $d-coords.csv | cut -d ',' -f 3 )
+	sequence_right=$( grep $id $d-coords.csv | cut -d ',' -f 4 )
 
 	#Add information to final.csv output
-	echo $chr,$start,$end,$cm,$evalue,$sequence >> $d-final-right.csv 
+	echo $chr_right,$start_right,$end_right,$cm_right,$evalue_right,$sequence_right >> $d-final-right.csv 
 	
     else
 	:
@@ -230,16 +230,21 @@ do
     n=$(($n+1))
 done
 
+paste -d ',' status.txt $d-combined.csv > $d-combined-2.csv
+
+grep -v [XYM], $d-combined-2.csv > $d-intermediate
+grep -v ' ' $d-intermediate > $d-to-add.csv
+
 echo Name > labels.txt
 count=1
-all=$(($total+$samples+1))
-while (($count != $all))
+all=$(grep -v "Start" $d-to-add.csv | wc -l)
+while (($count <= $all))
 do
     echo RNA$count >> labels.txt
     count=$(($count+1))
 done
 
-(paste -d ',' labels.txt status.txt $d-combined.csv) > $d-ncrna-dataset-1.csv
+paste -d ',' labels.txt $d-to-add.csv > $d-ncrna-dataset-1.csv
 echo $d-ncrna-dataset-1.csv completed
 echo
 
@@ -264,6 +269,9 @@ mv $d-combined.csv $d-ncrna-excess/
 
 rm -rf labels.txt
 rm -rf status.txt
+rm -rf $d-combined-2.csv
+rm -rf $d-intermediate
+rm -rf $d-to-add.csv
 
 #####################################################################
 
