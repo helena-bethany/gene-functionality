@@ -13,9 +13,9 @@ count=$(( $id + 1 ))
 
 # Create local human genome blast database
 
-read -p "Make local blastn database?" response
+read -p "Make local blastn database? (y/n)" response
 
-if [ $response == "Yes" ]]
+if [ $response == "y" ]]
 then
     wget ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/001/405/GCF_000001405.38_GRCh38.p12/GCF_000001405.38_GRCh38.p12_genomic.fna.gz
     gunzip GCF_000001405.38_GRCh38.p12_genomic.fna.gz
