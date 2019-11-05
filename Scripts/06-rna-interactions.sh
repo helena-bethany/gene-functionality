@@ -21,6 +21,25 @@ calc() { awk "BEGIN{print $*}"; }
 # mRNA: https://www.ncbi.nlm.nih.gov/gene/?term=(mRNA)+AND+%22Homo+sapiens%22%5Bporgn%3A__txid9606%5D
 # ncRNA: https://www.ncbi.nlm.nih.gov/gene/?term=(ncRNA)+AND+%22Homo+sapiens%22%5Bporgn%3A__txid9606%5D
 
+get_ncrna_sequence() {
+
+python3 - <<END
+    
+from Bio import SeqIO
+from random import sample
+    
+output = open("ncrna-250.fa", "w")
+    
+with open("data.fa") as f:
+    seqs = SeqIO.parse(f, "fasta")
+    samps = ((seq.name, seq.seq) for seq in  sample(list(seqs),250))
+    for samp in samps:
+        output.write(">{}\n{}\n".format(*samp))
+            
+END 
+
+}
+
 get_ncbi_sequence() {
     
     top=$( grep "NC_" $1.txt | head -250 )
@@ -58,20 +77,7 @@ else
     
     grep -v 'Start' $1 | cut -d ',' -f 1,8 | tr ',' ' ' | perl -lane '{print ">$F[0]\n$F[1]"}' | tr -d '"' > data.fa
     
-    python3 - <<END
-    
-    from Bio import SeqIO
-    from random import sample
-    
-    output = open("ncrna-250.fa", "w")
-    
-    with open("data.fa") as f:
-        seqs = SeqIO.parse(f, "fasta")
-        samps = ((seq.name, seq.seq) for seq in  sample(list(seqs),250))
-        for samp in samps:
-            output.write(">{}\n{}\n".format(*samp))
-    
-    END 
+    get_ncrna_sequence
     
     cat $file1_name.fa $file2_name.fa $file3_name.fa ncrna-250.fa > interactionstest.fa 
     ./risearch2.x -c interactionstest.fa -o interaction.suf
