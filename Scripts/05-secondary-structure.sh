@@ -20,60 +20,60 @@ var=1
 
 maf_to_stockholm() {
 
-	PYTHON_ARG="$1" python3 - <<END
+PYTHON_ARG="$1" python3 - <<END
 
-	from Bio import SeqIO
-	from Bio import AlignIO
-	from Bio.Seq import Seq
-	from Bio.SeqRecord import SeqRecord
-	import os
-	import sys
+from Bio import SeqIO
+from Bio import AlignIO
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
+import os
+import sys
 
-	a = []
-	RNA = str(os.environ['PYTHON_ARG'])
+a = []
+RNA = str(os.environ['PYTHON_ARG'])
 
-	alignments = AlignIO.parse("mafOut", 'maf')
-	for alignment in alignments:
-		a.append(alignment)	# Extracts each alignment from MAF file
+alignments = AlignIO.parse("mafOut", 'maf')
+for alignment in alignments:
+	a.append(alignment)	# Extracts each alignment from MAF file
 
-	my_records = []
-	file = open("RNA.stk", 'w')
-	file.write('# STOCKHOLM 1.0\n')	# Setting up beginning of stk file
-	file.write('\n')
-	file.write('#=GF ID '+RNA)
-	file.write('\n')
-	file.write('\n')
+my_records = []
+file = open("RNA.stk", 'w')
+file.write('# STOCKHOLM 1.0\n')	# Setting up beginning of stk file
+file.write('\n')
+file.write('#=GF ID '+RNA)
+file.write('\n')
+file.write('\n')
 
-	alignment = a[0]		
-	for record in alignment:
-		n = 1
-		ID = record.id		# Extracts ID from alignment information
-		seq = str(record.seq)	# Extracts sequence from alignment information
-		copies = 0
-		while n < len(a):
-			other = a[n]
-			for record in other:
-				d = record.id
-				if d == ID:
-					seq += str(record.seq)	# MAF file kept the sequence split on numerous lines
-					copies += 1		# so this connects them together into one sequence.
-				else:
-					pass
-			n += 1
-		ID = ID.replace('.','/')
-		if copies != (len(a)-1):
-			pass
-		else:
-			file.write(ID)
-			file.write(' '*(40-len(ID)))	# Making sure than spacing is the same for all sequences
-			file.write(seq)
-			file.write('\n')
+alignment = a[0]		
+for record in alignment:
+	n = 1
+	ID = record.id		# Extracts ID from alignment information
+	seq = str(record.seq)	# Extracts sequence from alignment information
+	copies = 0
+	while n < len(a):
+		other = a[n]
+		for record in other:
+			d = record.id
+			if d == ID:
+				seq += str(record.seq)	# MAF file kept the sequence split on numerous lines
+				copies += 1		# so this connects them together into one sequence.
+			else:
+				pass
+		n += 1
+	ID = ID.replace('.','/')
+	if copies != (len(a)-1):
+		pass
+	else:
+		file.write(ID)
+		file.write(' '*(40-len(ID)))	# Making sure than spacing is the same for all sequences
+		file.write(seq)
+		file.write('\n')
 
-	file.close()
+file.close()
 
-	count = SeqIO.convert("RNA.stk", 'stockholm', RNA+".fa", "fasta")
+count = SeqIO.convert("RNA.stk", 'stockholm', RNA+".fa", "fasta")
 
-	END
+END
 
 }
 
