@@ -35,32 +35,31 @@ n <- n + 1
 
 # Calculate averages across 100 RF simulations for OOB
   
-oob = mean(err$OOB)
-no = mean(err$No)
-yes = mean(err$Yes)
-err_final = rbind(err, c(NA,oob,no,yes)) 
+oob = mean(err[,1])
+no = mean(err[,2])
+yes = mean(err[,3])
+err_final = rbind(err, c(oob,no,yes)) 
   
 # Calculate averages across 100 RF simulations for variable importance
-  
-rownames(total) <- total[,1]
+
 num <- dim(total)[1]
-n <- 2
-v = c()
+n <- 1
+Importance = c()
   
-while (n < num) {
-i <- rowMeans(total[n,2:101])  
+while (n <= num) {
+i <- mean(total[n,])  
 v <- c(v, as.numeric(i))
 n <- n + 1  
 }
   
-total$Importance <- v
+total_final = cbind(total, Importance)
   
 # Calculate prediction success rate
   
-success <- pred[2,3] + pred[1,2]
-total_preds <- success + pred[2,2] + pred[1,3]
+success <- pred[1,1] + pred[2,2]
+total_preds <- success + pred[1,2] + pred[2,1]
 success_rate <- success/total_preds
-pred$Prediction <- c("",success_rate)
+pred_final <- rbind(pred, c(success_rate,0))
   
 # Export files
 
@@ -70,8 +69,8 @@ file2=paste(d,"importance",name,sep='-')
 file3=paste(d,"error",name,sep='-')
 file4=paste(d,"predictions",name,sep='-')
 
-write.csv(total,file2)  
+write.csv(total_final,file2)  
 write.csv(err_final,file3)    
-write.csv(pred,file4)   
+write.csv(pred_final,file4)   
 
 }
