@@ -16,11 +16,23 @@ calc() { awk "BEGIN{print $*}"; }
 
 read -p "Make indexed BAM files? (y/n)" response
 
-if [ $response == "y" ]]
+if [[ $response == "y" ]]
 then
-    samtools index ENCFF*.bam
-    bam_files=$( ls ENCFF*.bam )
-    for file in $bam_file; do samtools index $file; done
+    
+    samtools index ENCFF067CVP.bam
+    samtools index ENCFF089EWC.bam
+    samtools index ENCFF796BVP.bam
+    samtools index ENCFF893HSY.bam
+    
+    samtools index ENCFF369DYD.bam
+    samtools index ENCFF907AIK.bam
+    samtools index ENCFF766WSM.bam 
+    samtools index ENCFF722EAR.bam
+    samtools index ENCFF713UNS.bam
+    samtools index ENCFF178TTA.bam
+    samtools index ENCFF065MVD.bam 
+    samtools index ENCFF475WLJ.bam 
+	
 else
     :
 fi
@@ -35,10 +47,10 @@ echo HepG2,hESC,K562,GM12878,AverageLINE,AveragebpLINE > $d-line.csv
 
 for line in $(cat locations)
 do
-	HepG2=$(samtools view ENCODE/ENCFF067CVP.bam $line | wc -l)
-	hESC=$(samtools view ENCODE/ENCFF089EWC.bam $line | wc -l)
-	K562=$(samtools view ENCODE/ENCFF796BVP.bam $line | wc -l)
-	GM12878=$(samtools view ENCODE/ENCFF893HSY.bam $line | wc -l)
+	HepG2=$(samtools view ENCFF067CVP.bam $line | wc -l)
+	hESC=$(samtools view ENCFF089EWC.bam $line | wc -l)
+	K562=$(samtools view ENCFF796BVP.bam $line | wc -l)
+	GM12878=$(samtools view ENCFF893HSY.bam $line | wc -l)
 	total=$(calc $HepG2+$hESC+$K562+$GM12878)
 	average=$(calc $total/4)
 	echo $line > line.txt
@@ -58,14 +70,14 @@ echo SmoothMuscleCell,Hepatocyte,NeuralProgenitorCell,Myocyte,BipolarNeuron,Myot
 
 for line in $(cat locations)
 do
-	smoothmuscle=$(samtools view ENCODE/ENCFF369DYD.bam $line | wc -l)
-	hepatocyte=$(samtools view ENCODE/ENCFF907AIK.bam $line | wc -l)
-	progenitor=$(samtools view ENCODE/ENCFF766WSM.bam $line | wc -l)
-	myocyte=$(samtools view ENCODE/ENCFF722EAR.bam $line | wc -l)
-	neuron=$(samtools view ENCODE/ENCFF713UNS.bam $line | wc -l)
-	myotube=$(samtools view ENCODE/ENCFF178TTA.bam $line | wc -l)
-	multipotent=$(samtools view ENCODE/ENCFF065MVD.bam $line | wc -l)
-	cardiac=$(samtools view ENCODE/ENCFF475WLJ.bam $line | wc -l)
+	smoothmuscle=$(samtools view ENCFF369DYD.bam $line | wc -l)
+	hepatocyte=$(samtools view ENCFF907AIK.bam $line | wc -l)
+	progenitor=$(samtools view ENCFF766WSM.bam $line | wc -l)
+	myocyte=$(samtools view ENCFF722EAR.bam $line | wc -l)
+	neuron=$(samtools view ENCFF713UNS.bam $line | wc -l)
+	myotube=$(samtools view ENCFF178TTA.bam $line | wc -l)
+	multipotent=$(samtools view ENCFF065MVD.bam $line | wc -l)
+	cardiac=$(samtools view ENCFF475WLJ.bam $line | wc -l)
 	total=$(calc $smoothmuscle+$hepatocyte+$progenitor+$myocyte+$neuron+$myotube+$multipotent+$cardiac)
 	average=$(calc $total/8)
 	echo $line > line.txt
