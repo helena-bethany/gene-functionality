@@ -57,7 +57,10 @@ echo
 
 # Run cmscan to calculate bit score from pre-defined Rfam CMs
 
-cmscan --cpu 20 --rfam --cut_ga --nohmmonly --tblout $d.tblout --fmt 2 --clanin Rfam.12.1.clanin Rfam.cm $d-ncrna.fa %> /dev/null
+model=$( locate infernal-1.1.2/Rfam.cm | head -1 )
+clanin=$( locate infernal-1.1.2/testsuite/Rfam.12.1.clanin )
+
+cmscan --cpu 20 --rfam --cut_ga --nohmmonly --tblout $d-ncrna.tblout --fmt 2 --clanin $clanin $model 191106-ncrna.fa %> /dev/null
 echo cmscan complete
 echo
 
@@ -65,7 +68,7 @@ echo
 
 # Extract top cmscan hit and add metrics to one file
 
-file=$( grep -v "#" $d.tblout )
+file=$( grep -v "#" $d-ncrna.tblout )
 echo Chromosome,Start,End,CM-scan,eValue-scan,Sequence > $d-final.csv
 
 for line in $file
@@ -117,13 +120,13 @@ do
     left_end=$(( $start - 20000 ))
     left_start=$(( $left_end - $length ))
     left_sequence=$( grep -w "chromosome $chr" $3 | cut -f 2 | cut -c$left_start-$left_end )
-    echo $chr,$left_start,$left_end,$left_sequence >> $d-left.csv
+    echo Chr$chr,$left_start,$left_end,$left_sequence >> $d-left.csv
     
     #Generate null sequence 20,000 downstream of ncRNA
     right_start=$(( $end + 20000 ))
     right_end=$(( $right_start + $length ))
     right_sequence=$( grep -w "chromosome $chr" $3 | cut -f 2 | cut -c$right_start-$right_end )
-    echo $chr,$right_start,$right_end,$right_sequence >> $d-right.csv
+    echo Chr$chr,$right_start,$right_end,$right_sequence >> $d-right.csv
 done
 
 echo Negative control ncRNA sequences generated
@@ -133,7 +136,7 @@ echo Negative control ncRNA sequences generated
 # Run cmscan to calculate bit score from pre-defined Rfam CMs for upstream sequences
 
 grep -v 'Sequence' $d-left.csv | cut -d ',' -f 2,4 | tr ',' ' ' | perl -lane '{print ">$F[0]\n$F[1]"}' > $d-left.fa
-cmscan --cpu 20 --rfam -E 10000 --nohmmonly --tblout $d-left.tblout --fmt 2 --clanin Rfam.12.1.clanin Rfam.cm $d-left.fa &> /dev/null
+cmscan --cpu 20 --rfam -E 10000 --nohmmonly --tblout $d-left.tblout --fmt 2 --clanin $clanin $model $d-left.fa &> /dev/null
 echo cmscan complete
 echo
 
@@ -153,10 +156,10 @@ do
 	evalue_left=$(echo $line | tr -s ' ' | cut -d ' ' -f 18 )
     
 	#Extract corresponding information from coords output
-	chr_left=$( grep $id $d-coords.csv | cut -d ',' -f 1 | cut -c4-)
-	start_left=$( grep $id $d-coords.csv | cut -d ',' -f 2 )
-	end_left=$( grep $id $d-coords.csv | cut -d ',' -f 3 )
-	sequence_left=$( grep $id $d-coords.csv | cut -d ',' -f 4 )
+	chr_left=$( grep $id_left $d-left.csv | cut -d ',' -f 1 )
+	start_left=$( grep $id_left $d-left.csv | cut -d ',' -f 2 )
+	end_left=$( grep $id_left $d-left.csv | cut -d ',' -f 3 )
+	sequence_left=$( grep $id_left $d-left.csv | cut -d ',' -f 4 )
 
 	#Add information to final.csv output
 	echo $chr_left,$start_left,$end_left,$cm_left,$evalue_left,$sequence_left >> $d-final-left.csv 
@@ -172,7 +175,7 @@ done
 # Run cmscan to calculate bit score from pre-defined Rfam CMs for downstream sequences
 
 grep -v 'Sequence' $d-right.csv | cut -d ',' -f 2,4 | tr ',' ' ' | perl -lane '{print ">$F[0]\n$F[1]"}' > $d-right.fa
-cmscan --cpu 20 --rfam -E 10000 --nohmmonly --tblout $d-right.tblout --fmt 2 --clanin Rfam.12.1.clanin Rfam.cm $d-right.fa &> /dev/null
+cmscan --cpu 20 --rfam -E 10000 --nohmmonly --tblout $d-right.tblout --fmt 2 --clanin $clanin $model $d-right.fa &> /dev/null
 echo cmscan complete
 echo
 
@@ -192,10 +195,10 @@ do
 	evalue_right=$(echo $line | tr -s ' ' | cut -d ' ' -f 18 )
     
 	#Extract corresponding information from coords output
-	chr_right=$( grep $id $d-coords.csv | cut -d ',' -f 1 | cut -c4-)
-	start_right=$( grep $id $d-coords.csv | cut -d ',' -f 2 )
-	end_right=$( grep $id $d-coords.csv | cut -d ',' -f 3 )
-	sequence_right=$( grep $id $d-coords.csv | cut -d ',' -f 4 )
+	chr_right=$( grep $id_right $d-right.csv | cut -d ',' -f 1 )
+	start_right=$( grep $id_right $d-right.csv | cut -d ',' -f 2 )
+	end_right=$( grep $_right id $d-right.csv | cut -d ',' -f 3 )
+	sequence_right=$( grep $id_right $d-right.csv | cut -d ',' -f 4 )
 
 	#Add information to final.csv output
 	echo $chr_right,$start_right,$end_right,$cm_right,$evalue_right,$sequence_right >> $d-final-right.csv 
@@ -277,7 +280,7 @@ rm -rf $d-to-add.csv
 
 # Obtain correctly formatted chromosome positions for UCSC Table Browser
 
-grep -v 'Chromosome' $d-ncrna-dataset.csv | cut -d ',' -f 3,4,5 | tr ',' ' ' | perl -lane '{print "$F[0]:$F[1]-$F[2]"}' > $d-ncrna-dataset-ucsc.txt
+grep -v 'Chromosome' $d-ncrna-dataset-1.csv | cut -d ',' -f 3,4,5 | tr ',' ' ' | perl -lane '{print "$F[0]:$F[1]-$F[2]"}' > $d-ncrna-dataset-ucsc.txt
 
 echo RNAcentral.sh has finished running
 
