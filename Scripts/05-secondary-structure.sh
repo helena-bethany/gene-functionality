@@ -5,9 +5,9 @@
 # $1 is the input ncRNA dataset file
 
 IFS=$'\n'
-d=$(date +%y%m%d) # date identifier
+date=$(date +%y%m%d) # date identifier
 id=$( echo $1 | cut -d '.' -f 1 | cut -d '-' -f 4 )
-count=$(( $id + 1 ))
+id_count=$(( $id + 1 ))
 
 rm -rf rscapedata
 mkdir rscapedata
@@ -112,11 +112,11 @@ done
 
 # Build covariance model and calculate CM-HMM
 
-cmbuild RNAfinal.cm final.stk > $d-cmbuild.txt
-echo nseq, effnseq, CM-build, HMM-build > $d-cmbuildfinal.txt
-grep -v '#' $d-cmbuild.txt | tr -s " " | cut -d ' ' -f 3,4,5,10,11 | tr ' ' ',' >> $d-cmbuild1.txt
+cmbuild RNAfinal.cm final.stk > $date-cmbuild.txt
+echo nseq, effnseq, CM-build, HMM-build > $date-cmbuildfinal.txt
+grep -v '#' $date-cmbuild.txt | tr -s " " | cut -d ' ' -f 3,4,5,10,11 | tr ' ' ',' >> $date-cmbuild1.txt
 var=1
-for line in $(cat $d-cmbuild1.txt)
+for line in $(cat $date-cmbuild1.txt)
 do
 
     echo $line > snp
@@ -125,23 +125,23 @@ do
     rna=RNA$var
     if (( $r == $rna ))
     then
-	echo $data >> $d-cmbuildfinal.txt
+	echo $data >> $date-cmbuildfinal.txt
     else
-	echo 0,0,0,0 >> $d-cmbuildfinal.txt
+	echo 0,0,0,0 >> $date-cmbuildfinal.txt
     fi
     var=$(($var+1))
 done
 
-echo CM-HMM > $d-cmhmm.txt
+echo CM-HMM > $date-cmhmm.txt
 calc() { awk "BEGIN{print $*}"; }
 
-for line in $(cat $d-cmbuildfinal.txt | grep -v 'CM')
+for line in $(cat $date-cmbuildfinal.txt | grep -v 'CM')
 do
 	echo $line > file.txt
 	CM=$(cut -d ',' -f 3 file.txt)
 	HMM=$(cut -d ',' -f 4 file.txt)
 	diff=$(calc $CM-$HMM)
-	echo $diff >> $d-cmhmm.txt
+	echo $diff >> $date-cmhmm.txt
 done
 
 rm -rf file.txt
@@ -150,7 +150,7 @@ rm -rf file.txt
 
 # Process R-scape results
 
-echo covMin10,covMax10,#sigpair,#compatiable,#incompatiable,totalpairs,averageCov > $d-rscape.csv
+echo covMin10,covMax10,averageCov,#sigpair,#compatiable,#incompatiable,totalpairs > $date-rscape.csv
 FILES=./rscapedata/*.out
 data=$(ls $FILES | sort -V)
 
@@ -183,13 +183,13 @@ do
 	then
 	    echo 0, 0, 0, 0, 0, 0, 0 > info
 	else
-	    echo $min $a, $b, $d, $c, $average > info
+	    echo $min $average, $a, $b, $d, $c > info
 	fi
 	
-    	cat info >> $d-rscape.csv
+    	cat info >> $date-rscape.csv
 done
 
-paste -d ',' $1 $d-rscape.csv $d-cmbuildfinal.txt $d-cmhmm.txt > $d-ncrna-dataset-$count.csv
+paste -d ',' $1 $date-rscape.csv $date-cmbuildfinal.txt $date-cmhmm.txt > $date-ncrna-dataset-$id_count.csv
 
 #####################################################################
 
