@@ -7,7 +7,7 @@
 IFS=$'\n'
 d=$(date +%y%m%d) # date identifier
 id=$( echo $1 | cut -d '.' -f 1 | cut -d '-' -f 4 )
-count=$(( $id + 1 ))
+id_count=$(( $id + 1 ))
 
 #####################################################################
 
@@ -47,9 +47,6 @@ done
 
 FILES=./FASTA/
 data=$(ls $FILES | sort -V)
-
-cd $FILES
-cp ../$1 ./
 
 A='A'
 G='G'
@@ -163,18 +160,17 @@ do
     ratio=$(calc $top/$bottom)
     if (( $(echo "$ratio == 0.5" | bc -l) ))
     then
-	echo $a,$b,0,0,$max,$average > line
+	echo $a,$b,0,0,$average > line
     else
-	echo $a,$b,$ratio,$min,$max,$average > line
+	echo $a,$b,$ratio,$min,$average > line
     fi
     cat line >> freqsummary.csv
 
 done
 
-paste -d ',' $1 freqsummary.csv > $d-ncrna-dataset-$count.csv
+paste -d ',' $1 freqsummary.csv > $d-ncrna-dataset-$id_count.csv
 
 #####################################################################
 
-rm -rf freqsummary.csv
 rm -rf line
 rm -rf snps.file
