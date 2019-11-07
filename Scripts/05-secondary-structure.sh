@@ -9,8 +9,8 @@ date=$(date +%y%m%d) # date identifier
 id=$( echo $1 | cut -d '.' -f 1 | cut -d '-' -f 4 )
 id_count=$(( $id + 1 ))
 
-rm -rf rscapedata
-mkdir rscapedata
+rm -rf $date-rscapedata
+mkdir $date-rscapedata
 
 var=1
 
@@ -96,7 +96,7 @@ do
 	rscape_v1.0.4/bin/R-scape -E 100 -s $name.stk &> /dev/null
 	echo $name
 	rm -rf $name.sorted.out
-	mv $name.out \rscapedata
+	mv $name.out \$date-rscapedata
 	rm -rf overBed
 	rm -rf blank.txt
 	rm -rf *.pdf
@@ -151,7 +151,7 @@ rm -rf file.txt
 # Process R-scape results
 
 echo covMin10,covMax10,averageCov,#sigpair,#compatiable,#incompatiable,totalpairs > $date-rscape.csv
-FILES=./rscapedata/*.out
+FILES=./$date-rscapedata/*.out
 data=$(ls $FILES | sort -V)
 
 for f in $data
