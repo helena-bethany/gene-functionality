@@ -1,65 +1,178 @@
-# Method and Code Outline
+# Features of non-coding RNA functionality in humans
 
-### Generation of the dataset
+### Materials and Methods
 
-1. Download ncRNA from [RNAcentral](https://rnacentral.org/search?q=TAXONOMY:%229606%22%20AND%20expert_db:%22HGNC%22), filtering for _Homo sapiens_ and HGNC database, in the FASTA format. Also download the corresponding [chromosome coordinates file](ftp://ftp.ebi.ac.uk/pub/databases/RNAcentral/current_release/genome_coordinates/bed/). Don't use lncRNA, rRNA or precurser RNA to generate the training dataset. 
+* [Retrieval of functional ncRNA](#retrieval-of-functional-ncrna)
 
-ncRNA:
-https://rnacentral.org/search?q=HGNC%20AND%20NOT%20rna_type:%22lncRNA%22%20%20AND%20NOT%20rna_type:%22rRNA%22%20%20AND%20NOT%20rna_type:%22precursor%20RNA%22
+* [Positive and negative control sequences](#positive-and-negative-control-sequences)
 
-ncRNA chromosomal coordinates: ftp://ftp.ebi.ac.uk/pub/databases/RNAcentral/current_release/genome_coordinates/bed/homo_sapiens.GRCh38.bed.gz
+* [Sequence conservation](#sequence-conservation)
 
-2. Download the [GRCh38 genome](https://www.ncbi.nlm.nih.gov/assembly/GCF_000001405.38/) from NCBI in FASTA format, and their corresponding BED files. Then reformat to a csv so that it can be easily read in python. The scaffolds that aren't associated with a main chromosome should also be removed.
+* [Population genetics](#population-genetics)
+
+* [Secondary structure conservation](#secondary-structure-conservation)
+
+* [RNA-RNA Interactions](#rna-rna-interactions)
+
+* [Genomic Copy Number](#genomic-copy-number)
+
+* [Transcription](#transcription)
+
+* [Analysis of functionality predictors](#analysis-of-functionality-predictors)
+
+* [References](#references)
+
+-----------------------------------------------------------------------
+
+### Retrieval of functional ncRNA
+
+The links for downloading the ncRNA and lncRNA FASTA sequences are available below:
+
+[Link for downloading functional **ncRNA** from RNAcentral](https://rnacentral.org/search?q=HGNC%20AND%20NOT%20rna_type:%22lncRNA%22%20%20AND%20NOT%20rna_type:%22rRNA%22%20%20AND%20NOT%20rna_type:%22precursor%20RNA%22)
+
+[Link for downloading functional **only lncRNA** from RNAcentral](https://rnacentral.org/search?q=HGNC%20AND%20rna_type:%22lncRNA%22)
+
+To obtain the chromosome coordinates for each of the ncRNA from RNAcentral, the Homo sapiens GRCh38 bed file was obtained from the RNAcentral FTP directory, which contains the chromosome coordinates for all human ncRNA (The RNAcentral Consortium et al., 2017).
+
+Download homo_sapiens.GRCh38.bed.gz from: ftp://ftp.ebi.ac.uk/pub/databases/RNAcentral/current_release/genome_coordinates/bed/homo_sapiens.GRCh38.bed.gz
+
+### Positive and negative control sequences
+
+**A bunch of writing and links related to a currently non-existent positive control.**
+
+The human genome from NCBI was reformmated to a CSV file using the FASTA formatter from [FASTX-Toolkit version 0.0.13](http://hannonlab.cshl.edu/fastx_toolkit/) to allow for easier manipulation and parsing (Hannon, 2010). The X, Y, mictochondrial genome and scaffolds should then be removed from the CSV file.
+
+[Link for downloading the NCBI GRCh38.p12 human genome](https://www.ncbi.nlm.nih.gov/assembly/GCF_000001405.38/)
 
 ```
-#Convert from FASTA to tabular
+# Example of converting a genome file to a CSV
+
+# Convert from FASTA to tabular
 fasta_formatter -i GRCh38_latest_genomic.fna -o GRCh38_part1.csv -t
 
-#Remove scaffolds
+# Remove scaffolds
 grep "NC_" GRCh38_part1.csv > GRCh38_genome.csv
 ```
 
-3. Using the files downloaded from RNAcentral as input, run in **RNAcentral.sh** to obtain a CSV file with the sequences for the training and control datasets, as well as the CM and e-value scores from CMscan.
+**Talk about [01-generate-ncrna.sh](Scripts/01-generate-ncrna.sh)**
 
-* [**RNAcentral.sh:**](RNAcentral.sh) 
-  * **Arguments:** $1 is the downloaded FASTA file from RNAcentral and $2 is the name you want to give the dataset (eg: 181203dataset).
-  * **Additional Scripts:** [coordinates2.py](coordinates2.py), [RfamCM.py](RfamCM.py) and [random_sequences.py](random_sequences.py).
-  * **Additional Files:** Homo_sapiens.GRCh38.bed (chromosome coordinates) and GRCh38_genome.csv (reformatted genome). NB: These files need these names
-  * **Additional Functions:** [fasta_formatter](http://hannonlab.cshl.edu/fastx_toolkit/commandline.html) and [cmscan](http://eddylab.org/infernal/).
-  * **Output:** $2_final.csv is the converted dataset for RNAcentral data and $2_spare is the null dataset based off the RNAcentral data.
+* The initial dataset was generated using the script 01-generate-ncrna.sh, which takes the RNAcentral FASTA file, chromosome coordinates file and CSV human genome file as input. In summary, this script matches up the chromosome coordinates for each of the functional ncRNA, generates the negative control sequences to represent non-functional ncRNA and calculates the bit score for each ncRNA against curated Rfam CMs. This then generates two output files, which are a CSV file of the functional and non-functional ncRNA training and test data, and a text file of the chromosome coordinates that have been correctly formatted for UCSC Table Browser. 
 
-### Conservation of Sequence
+### Sequence conservation
 
-1. The file snp151_trimmed_sorted.bed is provided but the code for generating it is as follows: 
-Download snp151.txt.gz from ftp://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/
+The file snp151_trimmed_sorted.bed, which is a local copy of release 151 of the dbSNP database (Sherry et al., 2001) is provided, but the code for generating it is as follows:
+
+Download snp151.txt.gz from: ftp://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/
 
 ```
+# Generating a parasable local copy of the dbSNP database
+
 gunzip snp151.txt.gz
-grep  -v chr[A-Z]_* I think >snp151_no_alts
-grep -v Chromosome rnacentraloutput_FINAL.csv |  cut -f 3,4,5 -d "," | tr ',' '\t' >rnacentraloutput_FINAL.bed
-cut -f 2,3,4 snp151_no_alts >snp151_trimmed.bed
+grep  -v chr[A-Z]_* I think > snp151_no_alts
+grep -v Chromosome rnacentraloutput_FINAL.csv |  cut -f 3,4,5 -d "," | tr ',' '\t' > rnacentraloutput_FINAL.bed
+cut -f 2,3,4 snp151_no_alts > snp151_trimmed.bed
 sort -k1,1 -k2,2n snp151_trimmed.bed > snp151_trimmed_sorted.bed 
 sort -k1,1 -k2,2n rnacentraloutput_FINAL.bed > rnacentraloutput_FINAL_sorted.bed 
 
-awk '$1="chr"$1' rnacentraloutput_FINAL_sorted.bed | tr ' ' '\t' >rnacentraloutput_FINAL_sorted1.bed 
-bedtools intersect -c -a rnacentraloutput_FINAL_sorted1.bed -b snp151_trimmed_sorted.bed -wa -sorted >rnacentraloutput_snp_intersection
+awk '$1="chr"$1' rnacentraloutput_FINAL_sorted.bed | tr ' ' '\t' > rnacentraloutput_FINAL_sorted1.bed 
+bedtools intersect -c -a rnacentraloutput_FINAL_sorted1.bed -b snp151_trimmed_sorted.bed -wa -sorted > rnacentraloutput_snp_intersection
 ```
 
-2. To obtain the phastCons and phyloP conservation scores, use the [UCSC table browser](http://genome.ucsc.edu/cgi-bin/hgTables?hgsid=701273921_eML3CJEnXm4rsnQmqAuYnNHkZVkV) and grab the columns of interest (maximum and average). **Note:** doing this is much faster and easier than downloading them via mysql.
+**Talk about [02-ucsc-dbsnp.sh](Scripts/02-ucsc-dbsnp.sh)**
+
+The phastCons and phyloP conservation scores can be obtained from the [UCSC table browser](http://genome.ucsc.edu/cgi-bin/hgTables?hgsid=701273921_eML3CJEnXm4rsnQmqAuYnNHkZVkV) (Karolchik et al., 2004). Both the maximum and average columns should be obtained for each of phastCons and PhyloP.
 
 ```
-#Reformat chromosome coordinates for input
+# Reformat chromosome coordinates using dated output from 01-generate-ncrna.sh
 grep -v 'Chromosome' file.csv | cut -d ',' -f 1,2,3 | tr ',' ' ' | perl -lane '{print "$F[0]:$F[1]-$F[2]"}'
 
-#Go onto UCSC table browser and input the following
-group: Comparitive Genomes
-track: Conservation
-table: Cons 100 Verts (phyloP100 way) or Cons 100 Verts (phastCons100way)
-region: define regions > submit chromosome coordinates (note only 1000 at a time)
-button to click: Summary/Statistics
+# Go onto UCSC table browser and input the following (replace with an image???)
+# group: Comparitive Genomes
+# track: Conservation
+# table: Cons 100 Verts (phyloP100 way) or Cons 100 Verts (phastCons100way)
+# region: define regions > submit chromosome coordinates (note only 1000 at a time)
+# button to click: Summary/Statistics
 ```
-This will not return all results, so use ##script name to join the returned SNP statitistics to their corresponding IDs
-### Population Statistics
+
+**This will not return all results, so use ##script name to join the returned SNP statitistics to their corresponding IDs - INSERT SCRAP OF CODE BELOW?**
+
+* The parameters used for cmscan were chosen to allow the analysis to run the same as the Rfam web server, which are described in detail on pages 27-28 of the Infernal 1.1 user guide (Nawrocki and Eddy, 2013). Another parameter was included in addition to these, which was --cpu 20, to increase the number of parallel CPU workers and decrease the time taken for cmscan to run (Nawrocki and Eddy, 2013). An E-value of 10,000 was used during the generation of the negative control sequences, using the parameter -E 10000 in cmscan. This meant that the number of bit scores produced for the negative control sequences could be maximised, since not all the negative control sequences would match well to known ncRNA sequences.
+
+### Population genetics
+
+* The number of overlapping features was using bedtools intersect from BEDtools version 2.29.0 to retrieve the number of SNPs in each ncRNA (Quinlan, 2014). 
+
+* Population data from phase 3 of the 1000 Genome Project was obtained in the script 03-1000genomes.sh, which used tabix from Sequence Alignment/Map Tools (SAMtools) to download VCF files for each set of chromosome coordinates in the dataset (Consortium and The 1000 Genomes Project Consortium, 2015; Li et al., 2009). Both -f and -h were specified with tabix which meant the generated index file was overwritten and not saved for each ncRNA (Li et al., 2009). VCFtools version 0.1.13 was used to analyse and determine the frequency of the SNPs present in the VCF files, with the VCF file specified using --vcf, allele frequency calculated using --freq and output specified using --out (Danecek et al., 2011). 
+
+### Secondary structure conservation
+
+* This was implemented using 05-secondary-structure.sh, with the multiple sequence alignment extracted using mafFetch with parameters hg38 and multiz100way, and then converted into a Stockholm alignment using modules Biopython version 1.73 (Cock et al., 2009; Kent, 2018). The consensus secondary structure predicted using RNAalifold from ViennaRNA Package 2.0, and a CM was generated using cmbuild from Infernal 1.1 once a Stockholm alignment and secondary structure consensus was produced for all ncRNA (Lorenz et al., 2011; Nawrocki and Eddy, 2013). 
+
+* The E-value was set to 100 using the parameter -E 100, to allow covariance to be calculated for the negative control sequences, which were less likely to form a realistic secondary structure, impacting the calculations.
+
+### RNA-RNA Interactions
+
+### Genomic Copy Number
+
+* For makeblastdb, -dbtype nucl was specified for the nucleotide input file and -parse_seqids was used to enable sequence ID parsing (Altschul et al., 1990). The output from blastn was customised to include the query accession, subject accession and percentage of identical matches using -outfmt "10 qaccver saccver pident" (Altschul et al., 1990). 
+
+### Transcription
+
+The links for the ENCODE total RNA-seq data (BAM files) for cell lines and differentiated cells are listed below (ENCODE Project Consortium, 2012).
+
+Cell Lines: 
+* H7-hESC ([ENCFF089EWC](https://www.encodeproject.org/files/ENCFF089EWC/))
+* HepG2 ([ENCFF067CVP](https://www.encodeproject.org/files/ENCFF067CVP/))
+* GM12878 ([ENCFF893HSY](https://www.encodeproject.org/files/ENCFF893HSY/))
+* K562 ([ENCFF796BVP](https://www.encodeproject.org/files/ENCFF796BVP/))
+
+Differentiated Cells: 
+* Smooth muscle cell from H9 ([ENCFF369DYD](https://www.encodeproject.org/files/ENCFF369DYD/))
+* Hepatocyte from H9 ([ENCFF907AIK](https://www.encodeproject.org/files/ENCFF907AIK/))
+* Neural progenitor cell from H9 ([ENCFF766ESM](https://www.encodeproject.org/files/ENCFF766ESM/))
+* Myocyte from LHCN-M2 ([ENCFF722EAR](https://www.encodeproject.org/files/ENCFF722EAR/))
+* Bipolar neuron from GM23338 ([ENCFF713UNS](https://www.encodeproject.org/files/ENCFF713UNS/))
+* Myotube from skeletal muscle myoblast ([ENCFF178TTA](https://www.encodeproject.org/files/ENCFF178TTA/))
+* Hematopoietic multipotent progenitor cell ([ENCFF065MVD](https://www.encodeproject.org/files/ENCFF065MVD/)) 
+* Cardiac muscle from RUES2 ([ENCFF475WLJ](https://www.encodeproject.org/files/ENCFF475WLJ/))
+
+Prior to estimating the level of transcription for ncRNA using the downloaded ENCODE data, the BAM files need to be indexed using samtools (Li et al., 2009).
+
+```
+# Example of indexing an ENCODE RNA-seq BAM file
+
+samtools index ENCFF089EWC.bam
+```
+
+**Talk about [08-encode-transcription.sh](Scripts/08-encode-transcription.sh)**
+
+* The downloaded BAM files were indexed using samtools index from SAMtools, and then the counts for each set of chromosome coordinates were obtained using samtools view, which can both be implemented in 08-encode-transcription.sh (Li et al., 2009). 
+
+### Analysis of functionality predictors
+
+*  For randomForest, ntree=1000 was specified so each model was created using 1000 decision trees, and proximity=TRUE was specified so the proximity measure was calculated between rows (Liaw et al., 2002). 
+
+---------------------------------------------------------------------------------------
+
+### References
+
+ENCODE Project Consortium (2012). An integrated encyclopedia of DNA elements in the human genome. Nature 489, 57–74.
+  
+Hannon, G.J. (2010). FASTX-Toolkit. http://<span>hannonlab.cshl.edu<span>/fastx_toolkit/. [November 2018].
+
+Karolchik, D., Hinrichs, A.S., Furey, T.S., Roskin, K.M., Sugnet, C.W., Haussler, D., and Kent, W.J. (2004). The UCSC Table Browser data retrieval tool. Nucleic Acids Res. 32, D493–D496.
+
+Li, H., Handsaker, B., Wysoker, A., Fennell, T., Ruan, J., Homer, N., Marth, G., Abecasis, G., Durbin, R., and 1000 Genome Project Data Processing Subgroup (2009). The Sequence Alignment/Map format and SAMtools. Bioinformatics 25, 2078–2079.
+
+Sherry, S.T., Ward, M.H., Kholodov, M., Baker, J., Phan, L., Smigielski, E.M., and Sirotkin, K. (2001). dbSNP: the NCBI database of genetic variation. Nucleic Acids Res. 29, 308–311.
+  
+The RNAcentral Consortium, Petrov, A.I., Kay, S.J.E., Kalvari, I., Howe, K.L., Gray, K.A., Bruford, E.A., Kersey, P.J., Cochrane, G., Finn, R.D., et al. (2017). RNAcentral: a comprehensive database of non-coding RNA sequences. Nucleic Acids Res. 45, D128–D134.
+
+----------------------------------------------------------------------------------------
+
+# UNEDITED
+
+### Population genetics
 
 1. Use **extractVCF.sh** to download VCF files (if available) from Phase 3 of the 1000 Genomes Project and puts them in a folder named FASTA (folder should be called this to make PopGenome run easier in R).
 
@@ -95,7 +208,7 @@ All NAs that were generated by PopGenome should also be changed to zeros.
   * Transition:Transversion Ratio = (transition +1)/(transition + transversion + 2)
   * **Output:** $2.csv is the original dataset with the new data added in.
 
-### Conservation of Secondary Structure
+### Secondary structure conservation
 
 1. Use **calculate_CM.sh** to obtain the multiple sequence alignment files from multiz100way (UCSC). These files are then used to calculate CM and HMM using cmbuild.
 
@@ -105,7 +218,7 @@ All NAs that were generated by PopGenome should also be changed to zeros.
   * **Additional Functions:** [mafFetch](http://hgdownload.soe.ucsc.edu/admin/exe/), [RNAalifold](https://www.tbi.univie.ac.at/RNA/), [R-scape](http://eddylab.org/R-scape/) and [cmbuild](http://eddylab.org/infernal/).
   * **Output:** $2.csv is the original dataset with the new data added in.
   
-### RNA:RNA Interactions
+### RNA-RNA Interactions
 
 1. Using NCBI Gene, download the text file for the "most relevant" promoters for protein coding genes, "most relevant" mRNA and "most relevant" ncRNA (eg: type ncRNA into NCBI Gene and download the results, alternatively the links for these are in the script filtergenes.sh). Using **filtergenes.py**, extract the sequences for the first 250 sequences for each of these groups.
 To geenerate the random sequences from your dataset, this python code can be run:
@@ -159,28 +272,9 @@ makeblastdb -in GCF_000001405.38_GRCh38.p12_genomic.fna -dbtype nucl -parse_seqi
   * **Additional Files:** human_genome.*
   * **Output:** $2.csv is the original dataset with the new data added in.
 
-### Transcription
 
-1. Download cell line and differentiated cell total RNA-seq data from ENCODE. Note that Dataset and BAM file IDs for the same sample are different.
 
-* Cell Lines: H7-hESC ([ENCFF089EWC](https://www.encodeproject.org/files/ENCFF089EWC/)), HepG2 ([ENCFF067CVP](https://www.encodeproject.org/files/ENCFF067CVP/)), GM12878 ([ENCFF893HSY](https://www.encodeproject.org/files/ENCFF893HSY/)), K562 ([ENCFF796BVP](https://www.encodeproject.org/files/ENCFF796BVP/)).
-* Differentiated Cells: smooth muscle cell from H9 ([ENCFF369DYD](https://www.encodeproject.org/files/ENCFF369DYD/)), hepatocyte from H9 ([ENCFF907AIK](https://www.encodeproject.org/files/ENCFF907AIK/)), neural progenitor cell from H9 ([ENCFF766ESM](https://www.encodeproject.org/files/ENCFF766ESM/)), myocyte from LHCN-M2 ([ENCFF722EAR](https://www.encodeproject.org/files/ENCFF722EAR/)), bipolar neuron from GM23338 ([ENCFF713UNS](https://www.encodeproject.org/files/ENCFF713UNS/)), myotube from skeletal muscle myoblast ([ENCFF178TTA](https://www.encodeproject.org/files/ENCFF178TTA/)), hematopoietic multipotent progenitor cell ([ENCFF065MVD](https://www.encodeproject.org/files/ENCFF065MVD/)) and cardiac muscle from RUES2 ([ENCFF475WLJ](https://www.encodeproject.org/files/ENCFF475WLJ/)).
-
-2. Index the downloaded bam files.
-
-```
-samtools index ENCFF089EWC.bam
-```
-
-3. Use **expencode.sh** to extract the number of reads for the chromosome coordinates of each ncRNA.
-
-* [**expencode.sh:**](expencode.sh)
-  * **Arguments:** $1 is the dataset (includes file location), $2 is the name of the output. 
-  * **Additional Files:** the bam.bai files that have been generated for each BAM file.
-  * **Additional Functions:** [samtools](http://www.htslib.org/)
-  * **Output:** $2.csv is the original dataset with the new data added in.
-
-### RandomForest Analysis
+### Analysis of functionality predictors
 
 1. Use **randomforest.R** to run RandomForest for x number of times and exports the importance, error and prediction values for each run.
 
@@ -225,3 +319,4 @@ qplot(data=CMcompare, x=Predictor, y=Zscore, geom=c("boxplot"), outlier.shape = 
 * [**rftest.R:**](RFtest.R)
   * **Arguments:** location of original data that wasn’t part of the testData, location of data that is part of the testData (70% will also be included in the trainData), name of prediction file, number of times to repeat random forest.
   * **Output:** One CSV file corresponding to the summed predictions made for all x models.
+  
