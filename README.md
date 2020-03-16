@@ -129,7 +129,7 @@ Cell Lines:
 Differentiated Cells: 
 * Smooth muscle cell from H9 ([ENCFF369DYD](https://www.encodeproject.org/files/ENCFF369DYD/))
 * Hepatocyte from H9 ([ENCFF907AIK](https://www.encodeproject.org/files/ENCFF907AIK/))
-* Neural progenitor cell from H9 ([ENCFF766ESM](https://www.encodeproject.org/files/ENCFF766ESM/))
+* Neural progenitor cell from H9 ([ENCFF766WSM](https://www.encodeproject.org/files/ENCFF766WSM/))
 * Myocyte from LHCN-M2 ([ENCFF722EAR](https://www.encodeproject.org/files/ENCFF722EAR/))
 * Bipolar neuron from GM23338 ([ENCFF713UNS](https://www.encodeproject.org/files/ENCFF713UNS/))
 * Myotube from skeletal muscle myoblast ([ENCFF178TTA](https://www.encodeproject.org/files/ENCFF178TTA/))
