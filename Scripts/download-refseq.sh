@@ -1,6 +1,6 @@
 # Obtain sequence from NCBI using RefSeq IDs
 
-set -xv
+#set -xv
 
 rm -rf numbers
 rm -rf genes.fa
@@ -20,7 +20,7 @@ calc() { awk "BEGIN{print $*}"; }
 
 rm -rf $d-protein-coding-genes.fa
 
-echo Name,Functional,Chromosome,Start,End > summary
+echo ID,Name,Functional,Chromosome,Start,End > summary
 
 ####################################################
 
@@ -34,6 +34,8 @@ shuf -i 1-$max -n 1000 > numbers
 
 # Obtain gene sequences and locations
 
+count=1
+
 for line in $( cat numbers )
 do
 
@@ -45,7 +47,7 @@ do
     test=$( echo $chr | cut -c1 )
     other=$( echo $chr | cut -c2 )
 
-    if [ "$test" -eq "0" ]
+    if [ "$test" -eq "0" ]    # Remove zero before each chromosome number (ie: 01 becomes 1)
     then
         chr=$other
     else
@@ -55,10 +57,10 @@ do
     start=$( echo $coords | cut -f 2 )
     end=$( echo $coords | cut -f 3 )
 
-    echo $id,Protein-coding,$chr,$start,$end >> summary
+    echo $id,RNA$count,Yes,$chr,$start,$end >> summary
 
     esearch -db nucleotide -query "$id" | efetch -format fasta >> genes.fa
-
+    count=$(( $count + 1 ))
 done
 
 #####################################################
@@ -68,7 +70,7 @@ done
 n=$( grep -c ">" genes.fa )
 num=$(( n*2 ))
 
-cat genes.fa | awk '/^>/ {printf("\n%s\n",$1);next; } { printf("%s",$1);}  END {printf("\n");}' | tail -"$num" > $d-protein-coding-genes.fa
+cat genes.fa | awk '/^>/ {printf("\n%s\n",$1);next; } { printf("%s",$1);}  END {printf("\n");}' | tail -"$num" > formatted-fasta.fa
 
 #####################################################
 
@@ -80,15 +82,19 @@ for line in $( cat summary )
 do
 
     name=$( echo $line | cut -d ',' -f 1 )
-    sequence=$( grep -A 1 $name $d-protein-coding-genes.fa | tail -1 )
+    sequence=$( grep -A 1 $name formatted-fasta.fa | tail -1 )
+    # Only echo sequence if it's present
     [ ! -z "$sequence" ] && echo $sequence >> seq
 
 done
 
 summary_len=$( cat summary | wc -l )
 seq_len=$( cat summary | wc -l)
+cat summary | cut -d ',' -f 2- > interim
 
-[[ $summary_len -eq $seq_len ]] && paste -d ',' summary seq > $d-protein-coding-dataset.csv
+[[ $summary_len -eq $seq_len ]] && paste -d ',' interim seq > $d-protein-coding-dataset.csv
+
+grep -v "Start" $d-protein-coding-dataset.csv | cut -d ',' -f 1,6 | tr ',' ' ' | perl -lane '{print ">$F[0]\n$F[1]"}' > $d-protein-coding-seq.fa
 
 ######################################################
 
@@ -96,3 +102,5 @@ rm -rf numbers
 rm -rf genes.fa
 rm -rf seq
 rm -rf summary
+rm -rf interim
+rm -rf formatted-fasta.fa
