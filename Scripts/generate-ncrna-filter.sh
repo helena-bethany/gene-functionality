@@ -1,6 +1,6 @@
 # Creation of the training/test dataset
 
-set -xv
+# set -xv
 
 #####################################################################
 
@@ -24,7 +24,6 @@ rm -rf $d-left-intersect
 rm -rf $d-right-coordinates.bed
 rm -rf $d-right-intersect.bed
 rm -rf $d-right-intersect
-rm -rf numbers
 
 #####################################################################
 
@@ -37,66 +36,65 @@ fasta_formatter -i $1 -o $d-converted.csv -t
 # Obtain chromosome coordinates for each functional ncRNA
 
 count=0
-max=$( cat $d-converted.csv | wc -l )
-shuf -i 1-$max -n 1000 > numbers
 
-echo ID,Function-type,Chromosome,Start,End,Sequence > ncrna-data
+echo ID,Functional,Chromosome,Start,End,Sequence > $d-functional-ncrna-dataset.csv
 
-if [ "$max" -gt "1000" ]
+for line in $(cat $d-converted.csv)
+do
+    ID=$( echo $line | cut -f 1 | cut -c1-18 )
+    sequence=$( echo $line | cut -f 2 )
+
+    if grep -q $ID $2
+    then
+        chr=$( grep -m 1 $ID $2 | cut -f 1 )
+        start=$( grep -m 1 $ID $2 | cut -f 2 )
+        end=$( grep -m 1 $ID $2 | cut -f 3 )
+        sequence_length=$(( $end - $start + 1 ))  # add 1 to match up the sequence length to its true value
+
+        if [ $chr == 'chrM' ]  # removes ncRNA from mitochondria
+        then
+            :
+        elif [ $chr == 'chrY' ]  # removes ncRNA from the Y chromosome
+        then
+            :
+        elif [ "$sequence_length" -gt "3000" ]  # removes sequences greater than 3000 bp
+        then
+            :
+        else
+            count=$(( $count + 1 ))
+            echo RNA$count,Yes,$chr,$start,$end,$sequence >> ncrna-dataset
+        fi
+
+    else
+        :
+
+    fi
+
+done
+
+if [ "$count" -gt "1000" ]    # If more than 1000 sequences, choose a random subset of 1000
 then
+
+    max=$( cat ncrna-dataset | wc -l )
+    shuf -i 1-$max -n 1000 > numbers
+    id_count=1
 
     for line in $( cat numbers )
     do
-
-        info=$( sed -n "$line"p $d-converted.csv )
-        ID=$( echo $info | cut -f 1 | cut -c1-18 )
-        sequence=$( echo $info | cut -f 2 )
-
-        if grep -q $ID $2
-        then
-            chr=$( grep -m 1 $ID $2 | cut -f 1 )
-            start=$( grep -m 1 $ID $2 | cut -f 2 )
-            end=$( grep -m 1 $ID $2 | cut -f 3 )
-            count=$(( $count + 1 ))
-
-            echo $ID,Functional-ncRNA,$chr,$start,$end,$sequence >> ncrna-data
-
-        else
-            :
-
-        fi
+        info=$( sed -n "$line"p ncrna-dataset | cut -d ',' -f 2- )
+        echo RNA$id_count,$info >> $d-functional-ncrna-dataset.csv
+        id_count=$(( id_count + 1 ))
     done
-
 else
-
-    for line in $(cat $d-converted.csv)
-    do
-
-        ID=$( echo $line | cut -f 1 | cut -c1-18 )
-        sequence=$( echo $line | cut -f 2 )
-
-        if grep -q $ID $2
-        then
-            chr=$( grep -m 1 $ID $2 | cut -f 1 )
-            start=$( grep -m 1 $ID $2 | cut -f 2 )
-            end=$( grep -m 1 $ID $2 | cut -f 3 )
-            count=$(( $count + 1 ))
-
-            echo $ID,Functional-ncRNA,$chr,$start,$end,$sequence >> ncrna-data
-
-        else
-
-        fi
-
-    done
+    cat ncrna-dataset >> $d-functional-ncrna-dataset.csv
 fi
-
-grep -v "chrM\|chrY" ncrna-data > $d-functional-ncrna-dataset.csv
 
 grep -v "Start" $d-functional-ncrna-dataset.csv | cut -d ',' -f 1,6 | tr ',' ' ' | perl -lane '{print ">$F[0]\n$F[1]"}' > $d-functional-ncrna-seq.fa
 
+other_count=$( grep -v "Start" $d-functional-ncrna-dataset.csv | wc -l )
+
 echo
-echo There were $count functional ncRNA found.
+echo There were $other_count functional ncRNA found.
 echo
 
 #####################################################################
@@ -107,28 +105,35 @@ text=$( grep -v "Start" $d-functional-ncrna-dataset.csv )
 
 for line in $text
 do
-    #Extract chromosome coordinates and sequence length for functional ncRNA
+    # Extract chromosome coordinates and sequence length for functional ncRNA
     chr=$( echo $line | cut -d ',' -f 3 )
     chromo=$( echo $chr | tr -d "chr" )
     start=$( echo $line | cut -d ',' -f 4)
     end=$( echo $line | cut -d ',' -f 5 )
     length=$(( $end - $start ))
 
-    #Generate null sequence 20,000 upstream of ncRNA
+    # Generate null sequence 20,000 upstream of ncRNA
     left_end=$(( $start - 20000 ))
     left_start=$(( $left_end - $length ))
     left_sequence=$( grep -w "chromosome $chromo" $3 | cut -f 2 | cut -c$left_start-$left_end )
-    echo $chr,$left_start,$left_end,$left_sequence >> left-data
+    if [ -z $left_sequence ]  # if no sequence extracted
+    then
+        :
+    else
+        echo $chr,$left_start,$left_end,$left_sequence >> $d-left.csv
+    fi
 
-    #Generate null sequence 20,000 downstream of ncRNA
+    # Generate null sequence 20,000 downstream of ncRNA
     right_start=$(( $end + 20000 ))
     right_end=$(( $right_start + $length ))
     right_sequence=$( grep -w "chromosome $chromo" $3 | cut -f 2 | cut -c$right_start-$right_end )
-    echo $chr,$right_start,$right_end,$right_sequence >> right-data
+    if [ -z $right_sequence ]
+    then
+        :
+    else
+        echo $chr,$right_start,$right_end,$right_sequence >> $d-right.csv
+    fi
 done
-
-grep -v "chrM\|chrY" left-data > $d-left.csv
-grep -v "chrM\|chrY" right-data > $d-right.csv
 
 echo Negative control ncRNA sequences generated
 echo
@@ -144,8 +149,6 @@ left_count=$( cat $d-left-intersect | wc -l )
 
 echo ID,Functional-type,Chromosome,Start,End,Sequence > $d-negative-control-dataset.csv
 
-count=1
-
 for line in $( cat $d-left.csv )
 do
 
@@ -155,8 +158,8 @@ do
     then
         :
     else
-        echo NC$count,Negative-control,$line >> $d-negative-control-dataset.csv
-        count=$(($count+1))
+        echo RNA$count,No,$line >> $d-negative-control-dataset.csv
+        count=$(($count+1))   # Have counter continue and not reset to one, better for combined NC and ncRNA together into one dataset
     fi
 
 done
@@ -190,6 +193,14 @@ grep -v "Start" $d-negative-control-dataset.csv | cut -d ',' -f 1,6 | tr ',' ' '
 total=$(( $left_count + $right_count ))
 echo There were $total negative control sequences that overlapped with annotated coding regions.
 echo
-count=$(( $count - 1 ))
+file_count=$( cat $d-negative-control-dataset.csv | wc -l )
+count=$(( $file_count - 1 ))
 echo There were $count non-overlapping negative control sequences generated.
 echo
+
+#############################################################################
+
+rm -rf left-data
+rm -rf right-data
+rm -rf ncrna-data
+rm -rf numbers
