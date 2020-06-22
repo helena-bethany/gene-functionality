@@ -31,6 +31,8 @@ echo "Type in the names of the following input within $additional_folder:"
 echo
 read -p "Rfam database (cm): " rfam_name
 echo
+read -p "Rfam SEED file (seed): " seed_name
+echo
 read -p "RNA:RNA interaction database (fa): " interaction_database
 echo
 read -p "Human genome blastn database: " human_genome
@@ -49,6 +51,14 @@ then
 else
     :
 fi
+# Need to specify ViennaRNA/bin for access_py.py
+if [ -f $additional_dependencies/access_py.py ]
+then
+    read -p "Enter path for ViennaRNA/bin for accessbility calculation: " access_directory
+    echo
+else
+    :
+fi
 
 #################################################################
 
@@ -59,6 +69,7 @@ fi
 # Run Rfam
 
 rfam_model=$additional_folder/$rfam_name      # Define location of CM model
+rfam_seed=$additional_folder/$seed_name       # Define location of CM Seed
 
 # Define location of required Infernal tools
 if [ -f $additional_dependencies/cmscan ]
@@ -66,10 +77,12 @@ then
     cmscan_path=$additional_dependencies/cmscan
     cmfetch_path=$additional_dependencies/cmfetch
     cmpress_path=$additional_dependencies/cmpress
+    cmbuild_path=$additional_dependencies/cmbuild
 else
     cmscan_path=cmscan
     cmfetch_path=cmfetch
     cmpress_path=cmpress
+    cmbuild_path=cmbuild
 fi
 
 # Determine whether RNA variable ID starts at 1 (functional/positive control) or higher (negative control)
@@ -84,18 +97,19 @@ do
     grep -A 1 -m 1 "RNA$var" $initial_fasta > rna.fa
     # Run sequence on CM model with lower sensitivity to find top scoring model
     $cmscan_path --tblout cm_all.tblout --fmt 2 $rfam_model rna.fa &> /dev/null
-    # Run sequence with only HMM and higher sensitivity
-    $cmscan_path --hmmonly --hmmmax --tblout hmm_rfam.tblout --fmt 2 $rfam_model rna.fa &> /dev/null
     
     # Determine best scoring CM model from either CM or HMM-only search (if no hit to CM).
     if [ -f cm_all.tblout ]
     then
         model_name=$( grep "RNA$var" cm_all.tblout | head -1 | tr -s ' ' | cut -d ' ' -f 3 )
-    elif [ -f hmm_rfam.tblout ]
-    then
-        model_name=$( grep "RNA$var" hmm_rfam.tblout | head -1 | tr -s ' ' | cut -d ' ' -f 3 )
     else
-        model_name=
+        $cmscan_path --hmmonly --tblout hmm_all.tblout --fmt 2 $rfam_model rna.fa &> /dev/null
+        if [ -f hmm_all.tblout ]
+        then
+            model_name=$( grep "RNA$var" hmm_all.tblout | head -1 | tr -s ' ' | cut -d ' ' -f 3 )
+        else
+            model_name=
+        fi
     fi
 
     if [ -z "$model_name" ]
@@ -105,8 +119,24 @@ do
         # Extract the CM model of interest
         $cmfetch_path $rfam_model $model_name > $model_name.cm
         $cmpress_path $model_name.cm &> /dev/null
+        
+        # Extract alignment for model of interest
+        if [ -f $additional_dependencies/esl-afetch ]
+        then
+            $additional_dependencies/esl-afetch $rfam_seed $model_name | grep -v "#=GC SS_cons" > $model_name.stk
+        else
+            esl-afetch $rfam_seed $model_name | grep -v "#=GC SS_cons" > $model_name.stk
+        fi
+        
+        # Build individual CM for model of interest
+        $cmbuild_path -F --noss $model_name-interim.cm $model_name.stk &> /dev/null
+        sed '/NC/ q' $model_name-interim.cm > $model_name-hmm.cm && grep "EFP7GF" $model_name-interim.cm >> $model_name-hmm.cm && grep "ECM" $model_name.cm >> $model_name-hmm.cm && echo CM >> $model_name-hmm.cm && sed '0,/CM/d' $model_name-interim.cm >> $model_name-hmm.cm
+        $cmpress_path $model_name-hmm.cm &> /dev/null
+
         # Run cmscan with high sensitivity parameters: runs on the inside and doesn't score to HMM at all.
         $cmscan_path --nohmmonly --max --tblout cm_rfam.tblout --fmt 2 $model_name.cm rna.fa &> /dev/null
+        $cmscan_path --hmmonly --hmmmax --tblout hmm_rfam.tblout --fmt 2 $model_name-hmm.cm rna.fa &> /dev/null
+        
     fi
 
     # Record CM bitscore
@@ -130,6 +160,10 @@ do
     var=$(( $var+1 ))
     rm -rf *.cm.*
     rm -rf $model_name.cm
+    rm -rf $model_name.cm &> /dev/null
+    rm -rf $model_name-hmm.cm &> /dev/null
+    rm -rf $model_name.stk &> /dev/null
+    rm -rf $model_name-interim.cm &> /dev/null
 
 done
 
@@ -146,18 +180,28 @@ do
     rfam_cm=$( grep -w "$name" $date-cm-rfam | cut -d ',' -f 2 )
     rfam_hmm=$( grep -w "$name" $date-hmm-rfam | cut -d ',' -f 2 )
 
-    if [ -z "$rfam_cm" ] # If no match to CM model, then CM-HMM is recorded as zero
+    if [[ -z "$rfam_cm"  && -z "$rfam_hmm" ]] # If no match to CM model, then CM-HMM is recorded as zero
     then
         rfam_cm=0
         rfam_hmm=0
-    elif [ -z "$rfam_hmm" ]  # If no match to HMM-only, then CM-HMM = CM
+    elif [[ -z "$rfam_hmm" && ! -z "$rfam_cm" ]]  # If no match to HMM-only, then CM-HMM = CM
     then
         rfam_hmm=0
+    elif [[ -z "$rfam_cm" && ! -z "$rfam_hmm" ]] # If no match to CM, but to HMM only
+    then
+        rfam_cm=0
     else
         :
     fi
 
-    rfam_diff=$( calc $rfam_cm-$rfam_hmm )
+    echo $rfam_hmm > test
+
+    if grep -q '-' test   # Need to change operation for subtracting a negative
+    then
+        rfam_diff=$( calc $rfam_cm+$rfam_hmm )
+    else
+        rfam_diff=$( calc $rfam_cm-$rfam_hmm )
+    fi
 
     echo $rfam_diff >> bitscore-dataset.csv
 
@@ -165,6 +209,7 @@ done
 
 ##################################################################
 
+rm -rf test
 rm -rf cm_rfam.tblout
 rm -rf hmm_rfam.tblout
 rm -rf rna.fa
@@ -180,23 +225,51 @@ mv $date-hmm-rfam additional-output/
 
 # Obtain VCF Files
 
+rm -rf coordinates
+
 # Alter count according to what number the RNA IDs start at
 max=$( tail -1 $initial_data | cut -d ',' -f 1 | tr -d RNA )
 var=$( head -2 $initial_data | tail -1 | cut -d ',' -f 1 | tr -d RNA )
 count=1
 
-# Reformat chromosome coordinates for tabix
-grep -v 'Chromosome' $initial_data | cut -d ',' -f 3,4,5 | tr ',' ' ' | perl -lane '{print "$F[0]:$F[1]-$F[2]"}' | tr -d "chr" > coordinates
+# Reformat chromosome coordinates for to obtain hg19 coordinates
+grep -v 'Chromosome' $initial_data | cut -d ',' -f 3,4,5 | tr ',' '\t' > coordinates
+grep -v 'Chromosome' $initial_data | cut -d ',' -f 1 > id
+paste -d '\t' coordinates id > input.bed
 
 # Delete any previous VCF files
 rm -rf FASTA.zip
 mkdir FASTA
 
+# Convert coordinates to hg19 genome version
+if [ -f $additional_dependencies/liftOver ]
+then
+    $additional_dependencies/liftOver input.bed $additional_files/hg38ToHg19.over.chain output.bed unlifted.bed &> /dev/null
+else
+    liftOver input.bed $additional_files/hg38ToHg19.over.chain output.bed unlifted.bed &> /dev/null
+fi
+
 while [ $var -le $max ]
 do
         # Grab the coordinates for each RNA as the counter increases
-        line=$( sed -n "$count"p coordinates )
+        line=$( grep "RNA$var" output.bed | cut -f 1,2,3 | tr '\t' ' ' | tr -d "chr" | perl -lane '{print "$F[0]:$F[1]-$F[2]"}' )
+        
+        # If previous coordinate was associated with an annoated chromosome, use hg38 coordinates
+        if [ -z $line ] || [[ $line == *"Un_"* ]]
+        then
+            line=$( grep "RNA$var" $initial_data | cut -d ',' -f 3,4,5 | tr ',' ' ' | tr -d "chr" | perl -lane '{print "$F[0]:$F[1]-$F[2]"}' )
+        # Reformatting for scaffolds of annotated chromosomes
+        elif [[ $line == *"_"* ]]
+        then
+            a=$( echo $line | cut -d "_" -f 1 )
+            b=$( echo $line | cut -d ":" -f 2 )
+            line=$( echo $a:$b )
+        else
+           :
+        fi
+        
         name='RNA'$var
+        # echo $name
         chr=$( echo $line | cut -d ':' -f 1 )
 
         if [ -f $additional_dependencies/tabix ]
@@ -223,6 +296,10 @@ do
         count=$(( $count + 1 ))
 done
 
+rm -rf output.bed
+rm -rf input.bed
+rm -rf unlifted.bed
+
 #####################################################################
 
 # Calculate transitions, transversions and minor allele frequency
@@ -235,7 +312,7 @@ G='G'
 T='T'
 C='C'
 
-echo transition,transversion,TTratio,minMAF,aveMAF > 1000g-freqsummary.csv
+echo transition,transversion,TTratio,aveMAF > 1000g-freqsummary.csv
 
 for f in $data
 do
@@ -258,86 +335,92 @@ do
 
     for line in $(cat snps.file)
     do
-        # Record frequencies for each SNP
-        snpa=$(echo $line | cut -d ':' -f 1,3 | tr ":" " " | perl -lane '{print "$F[0]"}')
-        snpb=$(echo $line | cut -d ':' -f 1,3 | tr ":" " " | perl -lane '{print "$F[1]"}')
-        maf=$(echo $line | cut -d ":" -f 4)
-        total=$(calc $total+$maf)
-        # If the maximum is recorded as zero, set the new values automatically as the max
-        if (( $(echo "$max == 0" | bc -l) ))
+        echo $line > test
+        if grep -q ">" test   # Stop loop crashing if VCF file is empty
         then
-            min=$maf
-            max=$maf
-        # If the new SNP analysed has a frequency greater than the recorded max, update the max
-        elif (( $(echo "$maf > $max" | bc -l) ))
-        then
-            max=$maf
-        # If the new SNP analysed has a frequency smaller than the recorded min, update the min
-        elif (( $(echo "$maf < $min" | bc -l) ))
-        then
-            min=$maf
+            rm -rf test
         else
-            :
-        fi
-        # Counts the number of transitions and transversions
-        if [ "$snpa" == "$G" ]
-        then
-            if [ "$snpb" == "$A" ]
+            # Record frequencies for each SNP
+            snpa=$(echo $line | cut -d ':' -f 1,3 | tr ":" " " | perl -lane '{print "$F[0]"}')
+            snpb=$(echo $line | cut -d ':' -f 1,3 | tr ":" " " | perl -lane '{print "$F[1]"}')
+            maf=$(echo $line | cut -d ":" -f 4)
+            total=$(calc $total+$maf)
+            # If the maximum is recorded as zero, set the new values automatically as the max
+            if (( $(echo "$max == 0" | bc -l) ))
             then
-                a=$((a+1))
-            elif [ "$snpb" == "$T" ]
+                min=$maf
+                max=$maf
+            # If the new SNP analysed has a frequency greater than the recorded max, update the max
+            elif (( $(echo "$maf > $max" | bc -l) ))
             then
-                b=$((b+1))
-            elif [ "$snpb" == "$C" ]
+                max=$maf
+            # If the new SNP analysed has a frequency smaller than the recorded min, update the min
+            elif (( $(echo "$maf < $min" | bc -l) ))
             then
-                b=$((b+1))
+                min=$maf
             else
                 :
             fi
-        elif [ "$snpa" == "$A" ]
-        then
-            if [ "$snpb" == "$G" ]
+            # Counts the number of transitions and transversions
+            if [ "$snpa" == "$G" ]
             then
-                a=$((a+1))
-            elif [ "$snpb" == "$T" ]
+                if [ "$snpb" == "$A" ]
+                then
+                    a=$((a+1))
+                elif [ "$snpb" == "$T" ]
+                then
+                    b=$((b+1))
+                elif [ "$snpb" == "$C" ]
+                then
+                    b=$((b+1))
+                else
+                    :
+                fi
+            elif [ "$snpa" == "$A" ]
             then
-                b=$((b+1))
-            elif [ "$snpb" == "$C" ]
+                if [ "$snpb" == "$G" ]
+                then
+                    a=$((a+1))
+                elif [ "$snpb" == "$T" ]
+                then
+                    b=$((b+1))
+                elif [ "$snpb" == "$C" ]
+                then
+                    b=$((b+1))
+                else
+                    :
+                fi
+            elif [ "$snpa" == "$C" ]
             then
-                b=$((b+1))
+                if [ "$snpb" == "$T" ]
+                then
+                    a=$((a+1))
+                elif [ "$snpb" == "$A" ]
+                then
+                    b=$((b+1))
+                elif [ "$snpb" == "$G" ]
+                then
+                    b=$((b+1))
+                else
+                    :
+                fi
+            elif [ "$snpa" = "$T" ]
+            then
+                if [ "$snpb" == "$C" ]
+                then
+                    a=$((a+1))
+                elif [ "$snpb" == "$A" ]
+                then
+                    b=$((b+1))
+                elif [ "$snpb" == "$G" ]
+                then
+                    b=$((b+1))
+                else
+                    :
+                fi
             else
                 :
             fi
-        elif [ "$snpa" == "$C" ]
-        then
-            if [ "$snpb" == "$T" ]
-            then
-                a=$((a+1))
-            elif [ "$snpb" == "$A" ]
-            then
-                b=$((b+1))
-            elif [ "$snpb" == "$G" ]
-            then
-                b=$((b+1))
-            else
-                :
-            fi
-        elif [ "$snpa" = "$T" ]
-        then
-            if [ "$snpb" == "$C" ]
-            then
-                a=$((a+1))
-            elif [ "$snpb" == "$A" ]
-            then
-                b=$((b+1))
-            elif [ "$snpb" == "$G" ]
-            then
-                b=$((b+1))
-            else
-                :
-            fi
-        else
-            :
         fi
     done
 
@@ -358,9 +441,9 @@ do
     # Default ratio is 0.5 if no SNPs are present, should be changed to zero instead.
     if (( $(echo "$ratio == 0.5" | bc -l) ))
     then
-        echo $a,$b,0,0,$average > line
+        echo $a,$b,0,$average > line
     else
-        echo $a,$b,$ratio,$min,$average > line
+        echo $a,$b,$ratio,$average > line
     fi
     cat line >> 1000g-freqsummary.csv
 
@@ -534,6 +617,9 @@ rm -rf alignment
 
 var=$( head -2 $initial_data | tail -1 | cut -d ',' -f 1 | tr -d RNA )
 rm -rf *.stk
+rm -rf coordinates
+
+echo "RNAcode-score" > rnacode.csv
 
 # Reformats chromosome coordinates for mafFetch
 grep -v 'Chromosome' $initial_data | cut -d ',' -f 3,4,5 | tr ',' ' ' | perl -lane '{print "$F[0] $F[1] $F[2]"}' > coordinates
@@ -550,23 +636,44 @@ do
         fi
 
         rna_id='RNA'$var
-        maf_to_stockholm $rna_id
         var=$((var+1))
-
-        # Generate secondary structure consensus sequence
-        if [ -f $additional_dependencies/RNAalifold ]
+        file_len=$( cat mafOut | wc -l )
+        
+        if [ "$file_len" != "1" ]
         then
-            $additional_dependencies/RNAalifold -f S --aln-stk=$rna_id RNA.stk &> /dev/null
-        else
-            RNAalifold -f S --aln-stk=$rna_id RNA.stk &> /dev/null
-        fi
+            maf_to_stockholm $rna_id
 
-        # Run R-scape wit high E-value threshold to better score negative control sequences
-        if [ -f $additional_dependencies/R-scape ]
-        then
-            $additional_dependencies/R-scape -E 100 -s $rna_id.stk &> /dev/null
+            # Run RNAcode using original mafOut file
+            if [ -f $additional_dependencies/RNAcode ]
+            then
+                $additional_dependencies/RNAcode mafOut -o rnacode_output &> /dev/null
+            else
+                RNAcode mafOut -o rnacode_output &> /dev/null
+            fi
+            
+            # Takes the largest score, but records zero if no significant hits found.
+            rnacode=$( grep -v "No significant coding regions found.\|#\|=" rnacode_output | grep . | tr -s ' ' | cut -d ' ' -f 10 | grep . | sort -V | tail -1 )
+            [ -z $rnacode ] && echo 0 >> rnacode.csv || echo $rnacode >> rnacode.csv
+
+            # Generate secondary structure consensus sequence
+            if [ -f $additional_dependencies/RNAalifold ]
+            then
+                $additional_dependencies/RNAalifold -f S --aln-stk=$rna_id RNA.stk &> /dev/null
+            else
+                RNAalifold -f S --aln-stk=$rna_id RNA.stk &> /dev/null
+            fi
+
+            # Run R-scape wit high E-value threshold to better score negative control sequences
+            if [ -f $additional_dependencies/R-scape ]
+            then
+                $additional_dependencies/R-scape -E 100 -s $rna_id.stk &> /dev/null
+            else
+                R-scape -E 100 -s $rna_id.stk &> /dev/null
+            fi
         else
-            R-scape -E 100 -s $rna_id.stk &> /dev/null
+            # Generate blanks if no MAF available
+            touch $rna_id.cov
+            echo 0 >> rnacode.csv
         fi
 
         rm -rf *.sorted.cov
@@ -595,7 +702,7 @@ count_file=$( head -2 $initial_data | tail -1 | cut -d ',' -f 1 | tr -d RNA )
 
 while [ $count_file -le $total_rna ]
 do
-        if [ -f rscapedata/RNA$count_file.cov ]
+        if [ -f rscapedata/RNA$count_file.cov ] && [ -s rscapedata/RNA$count_file.cov ]  # Check file exists and is not empty
         then
             f=./rscapedata/RNA$count_file.cov
             min=$(grep -r 'GTp' $f | cut -d '[' -f 2 | tr ']' ',' | cut -d ',' -f 1,2)   # Min and max covariance
@@ -622,6 +729,7 @@ done
 
 #####################################################################
 
+rm -rf score
 rm -rf *.ps
 rm -rf *.stk
 rm -rf coordinates
@@ -807,7 +915,7 @@ mv snp-intersection-average.csv additional-output/
 
 grep -v "Start" $initial_data | cut -d ',' -f 3,4,5 | tr ',' ' ' | perl -lane '{print "$F[0]:$F[1]-$F[2]"}' > locations
 
-echo HepG2,hESC,K562,GM12878,SmoothMuscleCell,Hepatocyte,NeuralProgenitorCell,Myocyte,BipolarNeuron,Myotube,HematopoieticMultipotent,CardiacMuscle,MaxReadDepth > encode-rnaseq.csv
+echo DatasetAverage,CountAverage,MaxReadDepth > encode-rnaseq.csv
 
 # Define location of samtools
 if [ -f $additional_dependencies/samtools ]
@@ -832,6 +940,8 @@ do
         myotube=$($samtools_file view -c $additional_folder/ENCFF178TTA.bam $line )
         multipotent=$($samtools_file view -c $additional_folder/ENCFF065MVD.bam $line )
         cardiac=$($samtools_file view -c $additional_folder/ENCFF475WLJ.bam $line )
+        
+        count_sum=$( calc $HepG2+$hESC+$K562+$GM12878+$smoothmuscle+$hepatocyte+$progenitor+$myocyte+$neuron+$myotube+$multipotent+$cardiac )
 
         # Obtain max read depth for each dataset, in the same order as above
         $samtools_file depth -r $line $additional_folder/ENCFF067CVP.bam | cut -f 3 | sort -V | tail -1 >> max
@@ -848,6 +958,7 @@ do
         $samtools_file depth -r $line $additional_folder/ENCFF475WLJ.bam | cut -f 3 | sort -V | tail -1 >> max
 
         max_depth=$( cat max | sort -V | tail -1 )
+        [ -z $max_depth ] && max_depth=0    # record MRD as zero rather than blank
         
         # Obtain sequence length
         echo $line > line.txt
@@ -856,21 +967,16 @@ do
         length=$(calc $end-$start)
 
         # Calculate average number of counts
-        HepG2_ave=$(calc $HepG2/$length)
-        hESC_ave=$( calc $hESC/$length)
-        K562_ave=$( calc $K562/$length)
-        GM12878_ave=$( calc $GM12878/$length)
-        smoothmuscle_ave=$( calc $smoothmuscle/$length)
-        hepatocyte_ave=$( calc $hepatocyte/$length)
-        progenitor_ave=$( calc $progenitor/$length)
-        myocyte_ave=$( calc $myocyte/$length)
-        neuron_ave=$( calc $neuron/$length)
-        myotube_ave=$( calc $myotube/$length)
-        multipotent_ave=$( calc $multipotent/$length)
-        cardiac_ave=$( calc $cardiac/$length)
+        count_average=$( calc $count_sum/12 )
+        count_ave=$( calc $count_average/$length )
 
-        echo $HepG2_ave,$hESC_ave,$K562_ave,$GM12878_ave,$smoothmuscle_ave,$hepatocyte_ave,$progenitor_ave,$myocyte_ave,$neuron_ave,$myotube_ave,$multipotent_ave,$cardiac_ave,$max_depth >> encode-rnaseq.csv
+        [ -z $count_average ] && count_average=0
+        [ -z $count_ave ] && count_ave=0
+
+        echo $count_average,$count_ave,$max_depth >> encode-rnaseq.csv
         rm -rf max
+        rm -rf min
+
 done
 
 #####################################################################
@@ -881,7 +987,7 @@ rm -rf max
 
 #####################################################################
 
-# Calculate GC%
+# Calculate GC% + MFE
 
 echo GC_percentage > GC.csv
 
@@ -907,6 +1013,42 @@ done
 
 rm -rf sequence
 
+echo MFE > MFE.csv
+
+if [ -f $additional_dependencies/RNAfold ]
+then
+    $additional_dependencies/RNAfold --outfile=rnafold-output $initial_fasta &> /dev/null
+
+else
+    RNAfold --outfile=rnafold-output $initial_fasta &> /dev/null
+fi
+
+grep "(" rnafold-output | rev | cut -d "(" -f 1 | rev | tr -d ")" | tr -d " " >> MFE.csv
+
+rm -rf *.ps
+
+awk '!NF{$0="0"}1' MFE.csv > MFE-final.csv
+
+# Add ViennaRNA to $PATH
+export PATH=$PATH:$access_directory
+
+echo Accessibility > access.csv
+
+for sequence in $( grep -v ">" $initial_fasta )
+do
+    access=$( python3 $additional_dependencies/access_py.py -s $sequence ) &> /dev/null
+    if [ ! -z $access ]
+    then
+        echo $access >> access.csv
+    else
+        echo 0 >> access.csv
+    fi
+done
+
+sed -i 's/nan/NA/g' access.csv  # make NA readable by R
+
+rm -rf MFE.csv
+
 #####################################################################
 
 # Now combine all the generated data together
@@ -915,7 +1057,7 @@ rm -rf sequence
 date=$(date +%y%m%d)
 name=$( echo $initial_data | cut -d '-' -f 2,3 )
 
-paste -d ',' ncrna-dataset-snp.csv bitscore-dataset.csv 1000g-freqsummary.csv 1000g-popstats.csv rscape-dataset.csv interaction-intermediate.csv copy-number.csv encode-rnaseq.csv GC.csv > $date-$name-final-dataset.csv
+paste -d ',' ncrna-dataset-snp.csv bitscore-dataset.csv 1000g-freqsummary.csv 1000g-popstats.csv rscape-dataset.csv interaction-intermediate.csv copy-number.csv encode-rnaseq.csv GC.csv MFE-final.csv access.csv rnacode.csv > $date-$name-final-dataset.csv
 
 mv bitscore-dataset.csv additional-output/
 mv 1000g-freqsummary.csv additional-output/
@@ -926,6 +1068,10 @@ mv copy-number.csv additional-output/
 mv encode-rnaseq.csv additional-output/
 mv ncrna-dataset-snp.csv additional-output/
 mv GC.csv additional-output/
+mv MFE-final.csv additional-output/
+mv access.csv additional-output/
+mv rnacode.csv additional-output/
+mv rnafold-output additional-output/
 
 #####################################################################
 
