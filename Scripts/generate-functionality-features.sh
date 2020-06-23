@@ -252,12 +252,12 @@ fi
 while [ $var -le $max ]
 do
         # Grab the coordinates for each RNA as the counter increases
-        line=$( grep "RNA$var" output.bed | cut -f 1,2,3 | tr '\t' ' ' | tr -d "chr" | perl -lane '{print "$F[0]:$F[1]-$F[2]"}' )
+        line=$( grep -w "RNA$var" output.bed | cut -f 1,2,3 | tr '\t' ' ' | tr -d "chr" | perl -lane '{print "$F[0]:$F[1]-$F[2]"}' )
         
         # If previous coordinate was associated with an annoated chromosome, use hg38 coordinates
         if [ -z $line ] || [[ $line == *"Un_"* ]]
         then
-            line=$( grep "RNA$var" $initial_data | cut -d ',' -f 3,4,5 | tr ',' ' ' | tr -d "chr" | perl -lane '{print "$F[0]:$F[1]-$F[2]"}' )
+            line=$( grep -w "RNA$var" $initial_data | cut -d ',' -f 3,4,5 | tr ',' ' ' | tr -d "chr" | perl -lane '{print "$F[0]:$F[1]-$F[2]"}' )
         # Reformatting for scaffolds of annotated chromosomes
         elif [[ $line == *"_"* ]]
         then
