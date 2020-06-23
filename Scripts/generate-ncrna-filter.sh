@@ -8,6 +8,8 @@
 # $2 is the downloaded chromosome coordinates file
 # $3 is the csv file of the human genome
 # $4 is the uniprot bed file from UCSC
+# $5 is the ncrna bed file from GENCODE
+# $6 is the dependencies folder (optional)
 
 IFS=$'\n'
 d=$(date +%y%m%d)  # date identifier
@@ -24,6 +26,10 @@ rm -rf $d-left-intersect
 rm -rf $d-right-coordinates.bed
 rm -rf $d-right-intersect.bed
 rm -rf $d-right-intersect
+rm -rf left-intersect
+rm -rf right-intersect
+rm -rf left-intersect.bed
+rm -rf right-intersect.bed
 
 #####################################################################
 
@@ -143,9 +149,12 @@ echo
 # Filter left negative control sequences using UniProt
 
 grep -v "Start" $d-left.csv | cut -d ',' -f 1,2,3 | tr ',' ' ' | perl -lane '{print "$F[0] $F[1] $F[2]"}' | tr ' ' '\t' > $d-left-coordinates.bed
-bedtools intersect -a $4 -b $d-left-coordinates.bed > $d-left-intersect.bed
+[[ ! -z "$6" && -f $6/bedtools ]] && $6/bedtools intersect -a $4 -b $d-left-coordinates.bed > $d-left-intersect.bed || bedtools intersect -a $4 -b $d-left-coordinates.bed > $d-left-intersect.bed
 cat $d-left-intersect.bed | cut -f 1,2,3 | tr -d "chr" | tr '\t' ',' > $d-left-intersect
 left_count=$( cat $d-left-intersect | wc -l )
+
+[[ ! -z "$6" && -f $6/bedtools ]] && $6/bedtools intersect -a $5 -b $d-left-coordinates.bed > left-intersect.bed || bedtools intersect -a $5 -b $d-left-coordinates.bed > left-intersect.bed
+cat left-intersect.bed | cut -f 1,2,3 | tr -d "chr" | tr '\t' ',' > left-intersect
 
 echo ID,Functional-type,Chromosome,Start,End,Sequence > $d-negative-control-dataset.csv
 
@@ -155,6 +164,9 @@ do
     coordinates=$( echo $line | cut -d ',' -f 1,2,3 | tr -d "chr" )
 
     if grep -q $coordinates $d-left-intersect
+    then
+        :
+    elif grep -q $coordinates left-intersect
     then
         :
     else
@@ -169,9 +181,12 @@ done
 # Filter right negative control sequences using UniProt
 
 grep -v "Start" $d-right.csv | cut -d ',' -f 1,2,3 | tr ',' ' ' | perl -lane '{print "$F[0] $F[1] $F[2]"}' | tr ' ' '\t' > $d-right-coordinates.bed
-bedtools intersect -a $4 -b $d-right-coordinates.bed > $d-right-intersect.bed
+[[ ! -z "$6" && -f $6/bedtools ]] && $6/bedtools intersect -a $4 -b $d-right-coordinates.bed > $d-right-intersect.bed || bedtools intersect -a $4 -b $d-right-coordinates.bed > $d-right-intersect.bed
 cat $d-right-intersect.bed | cut -f 1,2,3 | tr -d "chr" | tr '\t' ',' > $d-right-intersect
 right_count=$( cat $d-right-intersect | wc -l )
+
+[[ ! -z "$6" && -f $6/bedtools ]] && $6/bedtools intersect -a $5 -b $d-right-coordinates.bed > right-intersect.bed || bedtools intersect -a $5 -b $d-right-coordinates.bed > right-intersect.bed
+cat right-intersect.bed | cut -f 1,2,3 | tr -d "chr" | tr '\t' ',' > right-intersect
 
 for line in $( cat $d-right.csv )
 do
@@ -179,6 +194,9 @@ do
     coordinates=$( echo $line | cut -d ',' -f 1,2,3 | tr -d "chr" )
 
     if grep -q $coordinates $d-right-intersect
+    then
+        :
+    elif grep -q $coordinates right-intersect
     then
         :
     else
@@ -204,3 +222,16 @@ rm -rf left-data
 rm -rf right-data
 rm -rf ncrna-data
 rm -rf numbers
+rm -rf $d-left.csv
+rm -rf $d-right.csv
+rm -rf $d-left-coordinates.bed
+rm -rf $d-left-intersect.bed
+rm -rf $d-left-intersect
+rm -rf $d-right-coordinates.bed
+rm -rf $d-right-intersect.bed
+rm -rf $d-right-intersect
+rm -rf left-intersect
+rm -rf right-intersect
+rm -rf left-intersect.bed
+rm -rf right-intersect.bed
+
