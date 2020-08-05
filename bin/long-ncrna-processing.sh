@@ -3,7 +3,7 @@
 # Script Name: long-ncrna-processing.sh
 #
 # Author: Helena Cooper
-# Last edited: 30/07/2020
+# Last edited: 30/08/2020
 #
 # Description: This script filters the functional long ncRNAs and generates negative control sequences. 
 #
