@@ -3,7 +3,7 @@
 # Script Name: short-ncrna-processing.sh
 #
 # Author: Helena Cooper
-# Last edited: 30/08/2020
+# Last edited: 30/06/2020
 #
 # Description: This script filters the functional short ncRNAs and generates negative control sequences. 
 #
