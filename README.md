@@ -117,6 +117,7 @@ ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_35/gencode.v35.a
 
 cat gencode.v34.annotation.gtf | grep "Mt_rRNA\|Mt_tRNA\|miRNA\|misc_RNA\|rRNA\|scRNA\|snRNA\|snoRNA\|ribozyme\|sRNA\|scaRNA\|lncRNA" | awk 'OFS="\t" {if ($3=="gene") {print $1,$4-1,$5,$10,$16,$7}}' | tr -d '";' > gencode-ncrna-annotation.bed
 ```
+-----------------------------------------------------------------------
 
 ### Intrinsic sequence features
 
@@ -217,11 +218,11 @@ bedtools closest -a $input_bed -b dfam-hg38.sorted.bed -io -D ref -id
 
 ### Protein and RNA specific features
 
-# Coding potential
+##### Coding potential
 
 Coding potential scores were either calculated using from sequence alignments using ```RNAcode``` or individual sequences using ```CPC2.py```, with default parameters being used for both (Kang et al., 2017; Lorenz et al., 2011). 
 
-# RNA structure
+##### RNA structure
 
 Covariance scores were calculated used ```rscape```, RNAalifold score was calculated using ```RNAalifold```, MFE was calculated with ```RNAfold``` and accessibility was calculated using ```access_py.py``` (Bhandari et al., 2019; Lorenz et al., 2011). Multiple sequence alignments for each sequence were obtained from the UCSC multiz100way alignment using ```mafFetch``` (Haeussler et al., 2019). Unless described below, default parameters were used for each executable.
 
@@ -253,7 +254,7 @@ rscape -E 100 -s $rna_id.stk
 RNAalifold_exe -q -f S --noPS RNA.stk 
 ```
 
-# RNA:RNA interactions
+##### RNA:RNA interactions
 
 Interaction energies were calculated using ```IntaRNA```, which were run against a interaction database containing 34 ncRNAs known to interact with a variety of RNAs (Mann et al., 2017; The RNAcentral Consortium et al., 2017). Default parameters ```-q``` query sequence and ```-t``` for target sequences were used for ```IntaRNA```.
 
@@ -307,7 +308,7 @@ randomForest(Functional~.,data=trainData,ntree=1000,proximity=TRUE, na.action=na
 
 Altschul, S.F., Gish, W., Miller, W., Myers, E.W., and Lipman, D.J. (1990). Basic local alignment search tool. J. Mol. Biol. 215, 403–410.
 
-https://github.com/Gardner-BinfLab/TIsigner_paper_2019
+Bhandari, B.K., Lim, C.S., and Gardner, P.P. (2019). Highly Accessible Translation Initiation Sites Are Predictive of Successful Heterologous Protein Expression.” bioRxiv.
 
 Braschi, B., Denny, P., Gray, K., Jones, T., Seal, R., Tweedie, S., Yates, B., and Bruford, E. (2019). Genenames.org: the HGNC and VGNC resources in 2019. Nucleic Acids Res. 47, D786–D792.
 
