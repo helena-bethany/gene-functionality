@@ -1,124 +1,152 @@
-# Features of non-coding RNA functionality in humans
+# Features of functional human genes.
 
-### Materials and Methods
+### Supplementary Materials and Methods
 
-* [Retrieval of functional ncRNA](#retrieval-of-functional-ncrna)
+* [Required dependencies](#required-dependencies)
 
-* [Positive and negative control sequences](#positive-and-negative-control-sequences)
+* [Retrieval of functional genes](#retrieval-of-functional-genes)
 
-* [Sequence conservation](#sequence-conservation)
+* [Negative control sequences](#negative-control-sequences)
 
-* [Population genetics](#population-genetics)
+* [Intrinsic sequence features](#intrinsic-sequence-features)
 
-* [Secondary structure conservation](#secondary-structure-conservation)
+* [Sequence conservation features](#sequence-conservation-features)
 
-* [RNA-RNA Interactions](#rna-rna-interactions)
+* [Transcription features](#transcription-features)
 
-* [Genomic Copy Number](#genomic-copy-number)
+* [Genomic repeat associated features](#genomic-repeat-associated-features)
 
-* [Transcription](#transcription)
+* [Protein and RNA specific features](#protein-and-rna-specific-features)
 
-* [Analysis of functionality predictors](#analysis-of-functionality-predictors)
+* [Population variation features](#population-variation-features)
+
+* [Analysis of potential functionality predictors](#analysis-of-potential-functionality-predictors)
 
 * [References](#references)
 
 -----------------------------------------------------------------------
 
-### Retrieval of functional ncRNA
+### Required dependencies
 
-The links for downloading the ncRNA and lncRNA FASTA sequences are available below:
+| Software | Program(s) Used | Reference |  
+|:------------:|:------------:|:------------:|
+|[Bedtools 2.29.0](https://bedtools.readthedocs.io/en/latest/content/installation.html)|bedtools| Quinlan, 2014 |
+|[Blast 2.10.0](https://ncbiinsights.ncbi.nlm.nih.gov/2019/12/18/blast-2-10-0/)|blastn ; makeblastdb| Altschul et al., 1990 |
+|[CPC2 beta](http://cpc2.cbi.pku.edu.cn/)|CPC2.py| Kang et al., 2017|
+|[IntaRNA 3.2.0](https://github.com/BackofenLab/IntaRNA/#install)|IntaRNA|Mann et al., 2017|
+|[R-scape 1.4.0](http://eddylab.org/R-scape/)|r-scape|Rivas et al.,2017| 
+|[Samtools version 1.10](http://www.htslib.org/download/)|samtools| Li et al., 2009 | 
+|[Tabix 1.10](http://www.htslib.org/doc/tabix.html)|tabix|Li, 2011|
+|[TIsigner](https://github.com/Gardner-BinfLab/TIsigner_paper_2019)|access_py.py| Bhandari et al., 2019 |
+|[UCSC genome browser 'kent' bioinformatic utilities](http://hgdownload.soe.ucsc.edu/admin/exe/)|bigWigSummary ; liftOver ; mafFetch | Haeussler et al., 2019 | 
+|[Variant Call Format 4.2](https://vcftools.github.io/downloads.html)|vcftools| Danecek et al., 2011 | 
+|[ViennaRNA 2.4.14](https://www.tbi.univie.ac.at/RNA/)|RNAalifold ; RNAcode ; RNAfold ; RNAplfold | Lorenz et al., 2011 | 
 
-[Link for downloading functional **ncRNA** from RNAcentral](https://rnacentral.org/search?q=HGNC%20AND%20NOT%20rna_type:%22lncRNA%22%20%20AND%20NOT%20rna_type:%22rRNA%22%20%20AND%20NOT%20rna_type:%22precursor%20RNA%22)
+-----------------------------------------------------------------------
+
+### Retrieval of functional genes
+
+The links for downloading the functional protein-coding genes, short ncRNA, precursor miRNA and lncRNA FASTA sequences are available below. Additional files and processing instructions reqired are also listed for each dataset.
+
+Link for downloading functional **protein-coding genes** from HGNC:
+ftp://ftp.ebi.ac.uk/pub/databases/genenames/hgnc/tsv/locus_types/gene_with_protein_product.txt
+
+* Download text file for all protein-coding genes from HGNC (Braschi et al., 2019), called gene_with_protein_product.txt, then process as described below. The generated text file is then used as one of the input files for [protein-coding-processing.sh](bin/protein-coding-processing.sh).
+
+```
+# Pipes one and two removes sequences encoded in the Y and Mt chromosomes or are no longer approved genes.
+# Pipes three to five extracts the columns associated with RefSeq IDs, and removes sequences associated with more than one ID.
+
+grep -v "mitochondrially encoded\|Entry Withdrawn\|Yq" gene_with_protein_product.txt | grep "Approved" | cut -f 24 | grep -v "|" | grep . > 200625-hgnc-PC-refseq-ids.txt
+```
+
+* To obtain the chromosome coordinates for each of the ncRNA from RNAcentral, the Homo sapiens GRCh38 bed file was obtained from the RNAcentral FTP directory, which contains the chromosome coordinates for all human ncRNA (The RNAcentral Consortium et al., 2017).
+
+Link to RNAcentral FTP directory containing homo_sapiens.GRCh38.bed.gz: ftp://ftp.ebi.ac.uk/pub/databases/RNAcentral/current_release/genome_coordinates/bed/homo_sapiens.GRCh38.bed.gz
+
+[Link for downloading functional **short ncRNA** from RNAcentral](https://rnacentral.org/search?q=HGNC%20AND%20NOT%20rna_type:%22lncRNA%22%20%20AND%20NOT%20rna_type:%22rRNA%22%20%20AND%20NOT%20rna_type:%22precursor%20RNA%22)
+
+* The downloaded FASTA file is then processed using [short-ncrna-processing.sh](bin/short-ncrna-processing.sh)
+
+[Link for downloading functional **precursor miRNA** from RNAcentral](https://rnacentral.org/search?q=rna_type:%22precursor%20RNA%22%20AND%20expert_db:%22HGNC%22%20AND%20TAXONOMY:%229606%22)
+
+* The downloaded FASTA file is then processed using [short-ncrna-processing.sh](bin/short-ncrna-processing.sh). To create a short ncRNA dataset with 1000 sequences, line 91 of this script can be altered to with the required number.
+
+```
+# Line 91 of short-ncrna-processing.sh, to create a dataset of 89 randomly selected precursor miRNAs
+shuf -i 1-$max -n 89 > numbers
+```
 
 [Link for downloading functional **only lncRNA** from RNAcentral](https://rnacentral.org/search?q=HGNC%20AND%20rna_type:%22lncRNA%22)
 
-To obtain the chromosome coordinates for each of the ncRNA from RNAcentral, the Homo sapiens GRCh38 bed file was obtained from the RNAcentral FTP directory, which contains the chromosome coordinates for all human ncRNA (The RNAcentral Consortium et al., 2017).
+* The downloaded FASTA file is then processed using [long-ncrna-processing.sh](bin/long-ncrna-processing.sh)
 
-Download homo_sapiens.GRCh38.bed.gz from: ftp://ftp.ebi.ac.uk/pub/databases/RNAcentral/current_release/genome_coordinates/bed/homo_sapiens.GRCh38.bed.gz
+### Negative control sequences
 
-### Positive and negative control sequences
+The links for downloading the required additional files for generating and filtering the negative control sequences, as well as processing steps, are available below. 
 
-**A bunch of writing and links related to a currently non-existent positive control.**
+[Link for downloading the NCBI GRCh38.p13 human genome FASTA and gff3 files from webserver](https://www.ncbi.nlm.nih.gov/genome/guide/human/)
 
-The human genome from NCBI was reformmated to a CSV file using the FASTA formatter from [FASTX-Toolkit version 0.0.13](http://hannonlab.cshl.edu/fastx_toolkit/) to allow for easier manipulation and parsing (Hannon, 2010). The X, Y, mictochondrial genome and scaffolds should then be removed from the CSV file.
-
-[Link for downloading the NCBI GRCh38.p12 human genome](https://www.ncbi.nlm.nih.gov/assembly/GCF_000001405.38/)
+* The human genome from NCBI (O'Leary et al., 2016) was reformmated to a tab delimited CSV file using the FASTA formatter from [FASTX-Toolkit version 0.0.13](http://hannonlab.cshl.edu/fastx_toolkit/) to allow for easier manipulation and parsing. 
 
 ```
-# Example of converting a genome file to a CSV
+# Download and unzip FNA file for human genome
+wget https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/001/405/GCF_000001405.39_GRCh38.p13/GCF_000001405.39_GRCh38.p13_genomic.fna.gz   
+gunzip GCF_000001405.39_GRCh38.p13_genomic.fna.gz
 
-# Convert from FASTA to tabular
-fasta_formatter -i GRCh38_latest_genomic.fna -o GRCh38_part1.csv -t
+# Reformat FNA to tab delimited CSV file
+fasta_formatter -i GCF_000001405.39_GRCh38.p13_genomic.fna.gz -o GRCh38_interim.csv -t
 
-# Remove scaffolds
-grep "NC_" GRCh38_part1.csv > GRCh38_genome.csv
+# Remove any scaffolds or alternative chromosomes
+grep "NC_" GRCh38_interim.csv > GRCh38.p13_genome.csv
 ```
 
-**Talk about [01-generate-ncrna.sh](Scripts/01-generate-ncrna.sh)**
+* Both SwissProt and GENCODE annotations are used to filter negative control sequences which overlap with known protein-coding and ncRNAs, which was done using ```bedtools intersect``` (Haeussler et al., 2019; Harrow et al., 2012; Quinlan, 2014).
 
-* The initial dataset was generated using the script 01-generate-ncrna.sh, which takes the RNAcentral FASTA file, chromosome coordinates file and CSV human genome file as input. In summary, this script matches up the chromosome coordinates for each of the functional ncRNA, generates the negative control sequences to represent non-functional ncRNA and calculates the bit score for each ncRNA against curated Rfam CMs. This then generates two output files, which are a CSV file of the functional and non-functional ncRNA training and test data, and a text file of the chromosome coordinates that have been correctly formatted for UCSC Table Browser. 
+Link for downloading SwissProt annotations of known protein-coding genes:
+https://hgdownload.soe.ucsc.edu/gbdb/hg38/uniprot/unipAliSwissprot.bb
 
-### Sequence conservation
-
-The file snp151_trimmed_sorted.bed, which is a local copy of release 151 of the dbSNP database (Sherry et al., 2001) is provided, but the code for generating it is as follows:
-
-Download snp151.txt.gz from: ftp://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/
+Link for downloading GENCODE annotations of known ncRNAs:
+ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_35/gencode.v35.annotation.gtf.gz
 
 ```
-# Generating a parasable local copy of the dbSNP database
+# Converting GENCODE GTF to bed file
 
-gunzip snp151.txt.gz
-grep  -v chr[A-Z]_* I think > snp151_no_alts
-grep -v Chromosome rnacentraloutput_FINAL.csv |  cut -f 3,4,5 -d "," | tr ',' '\t' > rnacentraloutput_FINAL.bed
-cut -f 2,3,4 snp151_no_alts > snp151_trimmed.bed
-sort -k1,1 -k2,2n snp151_trimmed.bed > snp151_trimmed_sorted.bed 
-sort -k1,1 -k2,2n rnacentraloutput_FINAL.bed > rnacentraloutput_FINAL_sorted.bed 
+# Pipe two filters sequences so only known ncRNAs are included.
+# Pipes three and four reformat the data into a bed file format.
 
-awk '$1="chr"$1' rnacentraloutput_FINAL_sorted.bed | tr ' ' '\t' > rnacentraloutput_FINAL_sorted1.bed 
-bedtools intersect -c -a rnacentraloutput_FINAL_sorted1.bed -b snp151_trimmed_sorted.bed -wa -sorted > rnacentraloutput_snp_intersection
+cat gencode.v34.annotation.gtf | grep "Mt_rRNA\|Mt_tRNA\|miRNA\|misc_RNA\|rRNA\|scRNA\|snRNA\|snoRNA\|ribozyme\|sRNA\|scaRNA\|lncRNA" | awk 'OFS="\t" {if ($3=="gene") {print $1,$4-1,$5,$10,$16,$7}}' | tr -d '";' > gencode-ncrna-annotation.bed
 ```
 
-**Talk about [02-ucsc-dbsnp.sh](Scripts/02-ucsc-dbsnp.sh)**
+### Intrinsic sequence features
 
-The phastCons and phyloP conservation scores can be obtained from the [UCSC table browser](http://genome.ucsc.edu/cgi-bin/hgTables?hgsid=701273921_eML3CJEnXm4rsnQmqAuYnNHkZVkV) (Karolchik et al., 2004). Both the maximum and average columns should be obtained for each of phastCons and PhyloP.
+GC content was calculated on command line by dividing the number of guanine and cytosine nucleotides by total sequence length.
+
+### Sequence conservation features
+
+The phastCons and phyloP scores for each sequence were calculated from the UCSC phastCons and phyloP 100-way bigWig files using either ```bigWigSummary``` (Haeussler et al., 2019).
+
+Link for downloading phyloP100way scores:
+http://hgdownload.cse.ucsc.edu/goldenpath/hg38/phyloP100way/hg38.phyloP100way.bw
+
+Link for downloading phastCons100way scores:
+http://hgdownload.cse.ucsc.edu/goldenpath/hg38/phastCons100way/hg38.phastCons100way.bw
 
 ```
-# Reformat chromosome coordinates using dated output from 01-generate-ncrna.sh
-grep -v 'Chromosome' file.csv | cut -d ',' -f 1,2,3 | tr ',' ' ' | perl -lane '{print "$F[0]:$F[1]-$F[2]"}'
+# Parameters used for running bigWigSummary
+# -type=mean reports the mean score
+# -type=max reports the maximum score
+# $chr $start $end is the chromosome coordiantes for the sequence
+# 1 causes the score across the whole sequence to be reported
 
-# Go onto UCSC table browser and input the following (replace with an image???)
-# group: Comparitive Genomes
-# track: Conservation
-# table: Cons 100 Verts (phyloP100 way) or Cons 100 Verts (phastCons100way)
-# region: define regions > submit chromosome coordinates (note only 1000 at a time)
-# button to click: Summary/Statistics
+bigWigSummary -type=mean hg38.phyloP100way.bw $chr $start $end 1
+bigWigSummary -type=max hg38.phyloP100way.bw $chr $start $end 1
+
 ```
 
-**This will not return all results, so use ##script name to join the returned SNP statitistics to their corresponding IDs - INSERT SCRAP OF CODE BELOW?**
+### Transcription features
 
-* The parameters used for cmscan were chosen to allow the analysis to run the same as the Rfam web server, which are described in detail on pages 27-28 of the Infernal 1.1 user guide (Nawrocki and Eddy, 2013). Another parameter was included in addition to these, which was --cpu 20, to increase the number of parallel CPU workers and decrease the time taken for cmscan to run (Nawrocki and Eddy, 2013). An E-value of 10,000 was used during the generation of the negative control sequences, using the parameter -E 10000 in cmscan. This meant that the number of bit scores produced for the negative control sequences could be maximised, since not all the negative control sequences would match well to known ncRNA sequences.
-
-### Population genetics
-
-* The number of overlapping features was using bedtools intersect from BEDtools version 2.29.0 to retrieve the number of SNPs in each ncRNA (Quinlan, 2014). 
-
-* Population data from phase 3 of the 1000 Genome Project was obtained in the script 03-1000genomes.sh, which used tabix from Sequence Alignment/Map Tools (SAMtools) to download VCF files for each set of chromosome coordinates in the dataset (Consortium and The 1000 Genomes Project Consortium, 2015; Li et al., 2009). Both -f and -h were specified with tabix which meant the generated index file was overwritten and not saved for each ncRNA (Li et al., 2009). VCFtools version 0.1.13 was used to analyse and determine the frequency of the SNPs present in the VCF files, with the VCF file specified using --vcf, allele frequency calculated using --freq and output specified using --out (Danecek et al., 2011). 
-
-### Secondary structure conservation
-
-* This was implemented using 05-secondary-structure.sh, with the multiple sequence alignment extracted using mafFetch with parameters hg38 and multiz100way, and then converted into a Stockholm alignment using modules Biopython version 1.73 (Cock et al., 2009; Kent, 2018). The consensus secondary structure predicted using RNAalifold from ViennaRNA Package 2.0, and a CM was generated using cmbuild from Infernal 1.1 once a Stockholm alignment and secondary structure consensus was produced for all ncRNA (Lorenz et al., 2011; Nawrocki and Eddy, 2013). 
-
-* The E-value was set to 100 using the parameter -E 100, to allow covariance to be calculated for the negative control sequences, which were less likely to form a realistic secondary structure, impacting the calculations.
-
-### RNA-RNA Interactions
-
-### Genomic Copy Number
-
-* For makeblastdb, -dbtype nucl was specified for the nucleotide input file and -parse_seqids was used to enable sequence ID parsing (Altschul et al., 1990). The output from blastn was customised to include the query accession, subject accession and percentage of identical matches using -outfmt "10 qaccver saccver pident" (Altschul et al., 1990). 
-
-### Transcription
-
-The links for the ENCODE total RNA-seq data (BAM files) for cell lines and differentiated cells are listed below (ENCODE Project Consortium, 2012).
+The links for the ENCODE total RNA-seq data (BAM files) for cell lines and differentiated cells are available below (ENCODE Project Consortium, 2012). Prior to estimating the level of transcription for ncRNA using the downloaded ENCODE data, the BAM files need to be indexed using ```samtools index``` (Li et al., 2009). Read counts were calculated using ```samtools view -c``` and maximum read depth was calculated using ```samtools depth -r``` (Li et al., 2009).
 
 Cell Lines: 
 * H7-hESC ([ENCFF089EWC](https://www.encodeproject.org/files/ENCFF089EWC/))
@@ -136,187 +164,187 @@ Differentiated Cells:
 * Hematopoietic multipotent progenitor cell ([ENCFF065MVD](https://www.encodeproject.org/files/ENCFF065MVD/)) 
 * Cardiac muscle from RUES2 ([ENCFF475WLJ](https://www.encodeproject.org/files/ENCFF475WLJ/))
 
-Prior to estimating the level of transcription for ncRNA using the downloaded ENCODE data, the BAM files need to be indexed using samtools (Li et al., 2009).
+### Genomic repeat associated features
+
+Prior to using ```blastn``` to estimate the number of sequence copies in the human genome, as blast database needs to be created from the previously downloaded [GRCh38.p13 human genome](https://www.ncbi.nlm.nih.gov/genome/guide/human/) (Altschul et al., 1990; O’Leary et al., 2016). 
 
 ```
-# Example of indexing an ENCODE RNA-seq BAM file
+# Create blast database for blastn
+makeblastdb -in GCF_000001405.39_GRCh38.p13_genomic.fna -dbtype nucl -parse_seqids -out human_genome
 
-samtools index ENCFF089EWC.bam
+##################################
+
+# Parameters used for running blastn:
+# -query $initial_fasta specifies the sequence input
+# -db human_genome specifies the previously generated blastn database
+# -evalue 0.01 sets the e-value cut-off to 0.01
+# -out output.csv names the generated output file
+# -outfmt "10 qaccver saccver pident" specifies that the output should include the query accession, subject accession and percentage of identical matches
+
+blastn -query $initial_fasta -db human_genome -evalue 0.01 -out output.csv -outfmt "10 qaccver saccver pident"
 ```
 
-**Talk about [08-encode-transcription.sh](Scripts/08-encode-transcription.sh)**
+Distances to the nearest repetitive element were calculated from a file of non-redundant hits of repetitive DNA elements in the human genome obtained from Dfam v3.1 (Hubley et al., 2016). Once this had been converted to bed file format, the distance to the nearest hit was calculated using ```bedtools closest```  (Quinlan, 2014). 
 
-* The downloaded BAM files were indexed using samtools index from SAMtools, and then the counts for each set of chromosome coordinates were obtained using samtools view, which can both be implemented in 08-encode-transcription.sh (Li et al., 2009). 
+Link for downloading Dfam non-redundent hg38 repetitive DNA elements:
+https://www.dfam.org/releases/Dfam_3.1/annotations/hg38/hg38_dfam.nrph.hits.gz
 
-### Analysis of functionality predictors
+```
+# Convert Dfam hits into bed format
 
-*  For randomForest, ntree=1000 was specified so each model was created using 1000 decision trees, and proximity=TRUE was specified so the proximity measure was calculated between rows (Liaw et al., 2002). 
+# Pipe one removes the header
+# Pipe two obtains Chr, Start and End columns
+# Pipe three removes alternate chromosome, incomplete scaffolds and chromosomes Y/Mt
+grep -v "#seq_name" hg38_dfam.nrph.hits | cut -f 1,10,11 | grep -v "_random\|chrY\|chrM" > dfam-hg38-nrph.bed
+
+# For loop reformats into bed format, and sorts the file so it can be used by bedtools
+for line in $( cat dfam-hg38-nrph.bed ) ; do chr=$( echo $line | cut -f 1 ) ; start=$( echo $line | cut -f 2 ) ; end=$( echo $line | cut -f 3 ) ; if [ "$start" -gt "$end" ] ; then echo -e $chr'\t'$end'\t'$start >> dfam-hg38.bed ; else echo $line >> dfam-hg38.bed ; fi ; done && sort -k1,1 -k2,2n dfam-hg38.bed > dfam-hg38-sorted.bed
+
+##################################
+
+# Parameters used for running bedtools:
+# bedtools closest reports the either overlapping or the nearest sequence in input 
+# -a $input_bed is the sequences of interest, converted to a bed file
+# -b dfam-hg38-nrph.bed is the Dfam non-redundent repetitive DNA elements
+# -io ignores overlaps, as some functional ncRNAs are considered repetitive DNA elements
+# -D ref reports distance with respect to the reference genome
+# -iu ignores upstream to report closest downstream element
+# -id ignores downstream to report closest upstream element
+
+bedtools closest -a $input_bed -b dfam-hg38-sorted.bed -io -D ref -iu 
+bedtools closest -a $input_bed -b dfam-hg38.sorted.bed -io -D ref -id 
+```
+
+### Protein and RNA specific features
+
+# Coding potential
+
+Coding potential scores were either calculated using from sequence alignments using ```RNAcode``` or individual sequences using ```CPC2.py```, with default parameters being used for both (Kang et al., 2017; Lorenz et al., 2011). 
+
+# RNA structure
+
+Covariance scores were calculated used ```rscape```, RNAalifold score was calculated using ```RNAalifold```, MFE was calculated with ```RNAfold``` and accessibility was calculated using ```access_py.py``` (Bhandari et al., 2019; Lorenz et al., 2011). Multiple sequence alignments for each sequence were obtained from the UCSC multiz100way alignment using ```mafFetch``` (Haeussler et al., 2019). Unless described below, default parameters were used for each executable.
+
+```
+# Parameters used for running mafFetch
+# hg38 specifies the original species genome
+# multiz100way specifies the original multiple sequence alignment to be used
+# overBed is the input
+# mafOut is the name of the output file
+
+mafFetch hg38 multiz100way overBed mafOut
+
+##################################
+
+# Parameters used for running R-scape
+# -E 100 sets the E-value to 100, which was used to ensure as many hits were obtained as possible for the negative control sequences or sequences with little covariance.
+# -s $rna_id.stk specifies that the input is a Stockholm file with $rna_id being the ID for a specific sequence
+
+rscape -E 100 -s $rna_id.stk 
+
+##################################
+
+# Parameters used for running RNAalifold
+# -q prevents output from being printed
+# -f S specifies the input is in Stockholm format
+# --noPS prevents postscript files from being created
+# RNA.stk is the input file
+
+RNAalifold_exe -q -f S --noPS RNA.stk 
+```
+
+# RNA:RNA interactions
+
+Interaction energies were calculated using ```IntaRNA```, which were run against a interaction database containing 34 ncRNAs known to interact with a variety of RNAs (Mann et al., 2017; The RNAcentral Consortium et al., 2017). Default parameters ```-q``` query sequence and ```-t``` for target sequences were used for ```IntaRNA```.
+
+[Link for downloading curated interaction database sequences from RNAcentral](https://rnacentral.org/search?q=URS000013F331_9606%20OR%20URS00003D2CC9_9606%20OR%20URS000038803E_9606%20OR%20URS0000735371_9606%20OR%20URS000072E1AF_9606%20OR%20URS00006A14B6_9606%20OR%20URS000065DEBF_9606%20OR%20URS0000C8E9D4_9606%20OR%20URS0000233681_9606%20OR%20URS000047B05D_9606%20OR%20URS00001A72CE_9606%20OR%20URS0000639DBE_9606%20OR%20URS00006D74B2_9606%20OR%20URS0000659172_9606%20OR%20URS000074C9DF_9606%20OR%20URS0000733374_9606%20OR%20URS000067A424_9606%20OR%20URS000007E37F_9606%20OR%20URS000034AAC2_9606%20OR%20URS0000744456_9606%20OR%20URS0000C8E9CE_9606%20OR%20URS00000F9D45_9606%20OR%20URS00006BDF17_9606%20OR%20URS00003EE995_9606%20OR%20URS00003F07BD_9606%20OR%20URS000075BAAE_9606%20OR%20URS000035C796_9606%20OR%20URS000000A142_9606%20OR%20URS000075EF5D_9606%20OR%20URS000075ADBA_9606%20OR%20URS0000443498_9606%20OR%20URS0000103047_9606%20OR%20URS00005CF03F_9606%20OR%20URS0000007D24_9606)
+
+```
+# Remove newlines from downloaded RNAcentral fasta file
+
+n=$( grep -c ">" URS000013F331_9606_OR_URS00003D2CC9_9606_OR_URS000038803E_9606_OR_URS0000735371_9606_OR_URS000072E1AF_9606_OR_URS00006A14B6_9606_OR_URS000065DEBF_9606_OR_URS0000C8E9D4_9606_OR_URS0000233681_96_etc.fasta )
+num=$(( n*2 ))
+cat URS000013F331_9606_OR_URS00003D2CC9_9606_OR_URS000038803E_9606_OR_URS0000735371_9606_OR_URS000072E1AF_9606_OR_URS00006A14B6_9606_OR_URS000065DEBF_9606_OR_URS0000C8E9D4_9606_OR_URS0000233681_96_etc.fasta | awk '/^>/ {printf("\n%s\n",$1);next; } { printf("%s",$1);}  END {printf("\n");}' | tail -"$num" > curated-interaction-database.fa
+```
+
+### Population variation features
+
+Prior to downloading the 1000 Genomes Project data, the sequence chromosomal coordinates were converted from hg38 to hg19 using ```liftOver``` and a hg38ToHg19.over.chain conversion file from UCSC (Haeussler et al., 2019). Population data from phase 3 of the 1000 Genomes Project was obtained by downloading VCF files using ```tabix -f -h``` (The 1000 Genomes Project Consortium, 2015; Li et al., 2009). SNP type and frequencies, which were used to caluculate the average minor allele frequency and transitions:transversions ratio, was calculated using ```vcftools``` (Danecek et al., 2011). Tajima's D and Fu and Li's D were calculated using [```popGenome```](https://cran.r-project.org/package=PopGenome) 2.7.5 in R (Pfeifer et al., 2014). Unless described below, default parameters were used for each executable.
+
+Link for downloading the UCSC hg38ToHg19.over.chain conversion file:
+http://hgdownload.cse.ucsc.edu/goldenpath/hg38/liftOver/hg38ToHg19.over.chain.gz
+
+```
+# Parameters used for running vcftools
+# --vcf specifies that the file input is a VCF
+# FASTA/$f is the input VCF file
+# --freq specifies that allele frequencies should be calculated
+# --out freq-afr is the name of the output file
+
+vcftools --vcf FASTA/$f --freq --out freq-afr
+```
+
+### Analysis of potential functionality predictors
+
+Spearman's Rho was calculated in R using the ```cor``` function and the confidence intervals were calculated using ```spearman.ci``` from the package [```spearmanCI```](https://cran.r-project.org/package=spearmanCI) 1.0. The 95% confidence intervals were specified using ```conf.level = 0.95``` and were calculated by boot-strapping 1000 times, which was specified using ```nrep=1000```.  
+
+RandomForest was run using [random-forest-analysis.R](bin/random-forest-analysis.R), which requires the dependecies [```randomForest```](https://cran.r-project.org/package=randomForest) 4.6-14, [```epiR```](https://cran.r-project.org/package=epiR) 1.0-15, [```pROC```](https://cran.r-project.org/package=pROC) 1.16.2 and [```mltools```](https://cran.r-project.org/package=mltools) 0.3.5 (Liaw et al., 2002; Robin et al., 2011).
+
+```
+# Parameters used for running randomForest
+# Functional~ specifies that randomForest is classifying on whether a sequence is functional or not
+# data=trainData specifies the training dataset
+# ntree=1000 specifies that 1000 trees should be generated
+# proximity=TRUE calculates a proximity matrix
+# na.action=na.roughfix allows for sequences with NA values to be used. These missing values are approximated using the median feature values. 
+
+randomForest(Functional~.,data=trainData,ntree=1000,proximity=TRUE, na.action=na.roughfix) 
+```
 
 ---------------------------------------------------------------------------------------
 
 ### References
 
+Altschul, S.F., Gish, W., Miller, W., Myers, E.W., and Lipman, D.J. (1990). Basic local alignment search tool. J. Mol. Biol. 215, 403–410.
+
+https://github.com/Gardner-BinfLab/TIsigner_paper_2019
+
+Braschi, B., Denny, P., Gray, K., Jones, T., Seal, R., Tweedie, S., Yates, B., and Bruford, E. (2019). Genenames.org: the HGNC and VGNC resources in 2019. Nucleic Acids Res. 47, D786–D792.
+
+Danecek, P., Auton, A., Abecasis, G., Albers, C.A., Banks, E., DePristo, M.A., Handsaker, R.E., Lunter, G., Marth, G.T., Sherry, S.T., et al. (2011). The variant call format and VCFtools. Bioinformatics 27, 2156–2158.
+
 ENCODE Project Consortium (2012). An integrated encyclopedia of DNA elements in the human genome. Nature 489, 57–74.
-  
-Hannon, G.J. (2010). FASTX-Toolkit. http://<span>hannonlab.cshl.edu<span>/fastx_toolkit/. [November 2018].
+
+Haeussler, M., Zweig, A.S., Tyner, C., Speir, M.L., Rosenbloom, K.R., Raney, B.J., Lee, C.M., Lee, B.T., Hinrichs, A.S., Gonzalez, J.N., et al. (2019). The UCSC Genome Browser database: 2019 update. Nucleic Acids Res. 47, D853–D858.
+
+Harrow, J., Frankish, A., Gonzalez, J.M., Tapanari, E., Diekhans, M., Kokocinski, F., Aken, B.L., Barrell, D., Zadissa, A., Searle, S., et al. (2012). GENCODE: the reference human genome annotation for The ENCODE Project. Genome Res. 22, 1760–1774.
+
+Hubley, R., Finn, R.D., Clements, J., Eddy, S.R., Jones, T.A., Bao, W., Smit, A.F.A., and Wheeler, T.J. (2016). The Dfam database of repetitive DNA families. Nucleic Acids Res. 44, D81–D89.
+
+Kang, Y.-J., Yang, D.-C., Kong, L., Hou, M., Meng, Y.-Q., Wei, L., and Gao, G. (2017). CPC2: a fast and accurate coding potential calculator based on sequence intrinsic features. Nucleic Acids Res. 45, W12–W16.
 
 Karolchik, D., Hinrichs, A.S., Furey, T.S., Roskin, K.M., Sugnet, C.W., Haussler, D., and Kent, W.J. (2004). The UCSC Table Browser data retrieval tool. Nucleic Acids Res. 32, D493–D496.
 
+Li, H. (2011). Tabix: fast retrieval of sequence features from generic TAB-delimited files. Bioinformatics 27, 718–719.
+
 Li, H., Handsaker, B., Wysoker, A., Fennell, T., Ruan, J., Homer, N., Marth, G., Abecasis, G., Durbin, R., and 1000 Genome Project Data Processing Subgroup (2009). The Sequence Alignment/Map format and SAMtools. Bioinformatics 25, 2078–2079.
+
+Lorenz, R., Bernhart, S.H., Höner Zu Siederdissen, C., Tafer, H., Flamm, C., Stadler, P.F., and Hofacker, I.L. (2011). ViennaRNA Package 2.0. Algorithms Mol. Biol. 6, 26.
+
+Mann, M., Wright, P.R., and Backofen, R. (2017). IntaRNA 2.0: enhanced and customizable prediction of RNA-RNA interactions. Nucleic Acids Res. 45, W435–W439.
+
+O’Leary, N.A., Wright, M.W., Brister, J.R., Ciufo, S., Haddad, D., McVeigh, R., Rajput, B., Robbertse, B., Smith-White, B., Ako-Adjei, D., et al. (2016). Reference sequence (RefSeq) database at NCBI: current status, taxonomic expansion, and functional annotation. Nucleic Acids Res. 44, D733–D745.
+
+Pfeifer, B., Wittelsbürger, U., Ramos-Onsins, S.E., and Lercher, M.J. (2014). PopGenome: an efficient Swiss army knife for population genomic analyses in R. Mol. Biol. Evol. 31, 1929–1936.
+
+Quinlan, A.R. (2014). BEDTools: The Swiss-Army Tool for Genome Feature Analysis. Curr. Protoc. Bioinformatics 47, 11.12.1–34.
+
+Rivas, E., Clements, J., and Eddy, S.R. (2017). A statistical test for conserved RNA structure shows lack of evidence for structure in lncRNAs. Nat. Methods 14, 45–48.
+
+Robin, X., Turck, N., Hainard, A., Tiberti, N., Lisacek, F., Sanchez, J.-C., and Müller, M. (2011). pROC: an open-source package for R and S+ to analyze and compare ROC curves. BMC Bioinformatics 12, 77.
 
 Sherry, S.T., Ward, M.H., Kholodov, M., Baker, J., Phan, L., Smigielski, E.M., and Sirotkin, K. (2001). dbSNP: the NCBI database of genetic variation. Nucleic Acids Res. 29, 308–311.
   
+The 1000 Genomes Project Consortium (2015). A global reference for human genetic variation. Nature 526, 68–74.  
+  
 The RNAcentral Consortium, Petrov, A.I., Kay, S.J.E., Kalvari, I., Howe, K.L., Gray, K.A., Bruford, E.A., Kersey, P.J., Cochrane, G., Finn, R.D., et al. (2017). RNAcentral: a comprehensive database of non-coding RNA sequences. Nucleic Acids Res. 45, D128–D134.
-
-----------------------------------------------------------------------------------------
-
-# UNEDITED
-
-### Population genetics
-
-1. Use **extractVCF.sh** to download VCF files (if available) from Phase 3 of the 1000 Genomes Project and puts them in a folder named FASTA (folder should be called this to make PopGenome run easier in R).
-
-* [**extractVCF.sh:**](extractVCF.sh)
-  * **Argument:** $1 is the name of the dataset file (including location to the file). 
-  * **Additional Functions:** [tabix](http://www.htslib.org/doc/tabix.html).
-  * **Output:** VCF files for each ncRNA.
-
-2. Go into R and obtain the population statistics using PopGenome.
-
-```
-library(PopGenome)
-genome.class <- readData("FASTA", format="VCF")
-genome.class <- neutrality.stats(genome.class)
-dataset <- get.neutrality(genome.class)[[1]]
-write.csv(dataset, "name.csv")     
-``` 
-
-3. Attach the PopGenome output to the current dataset file, as well as calculate the snp average.
-
-```
-Pretty sure I calculated this in the excel file so I haven't got command line code for this.
-snp average is number of snp divided by the ncRNA sequence length.
-All NAs that were generated by PopGenome should also be changed to zeros.
-```
-
-4. Use **filter1000genomes.sh** to calculate the number of transitions, transversions and relevant MAF in the dataset using the downloaded VCF files.
-
-* [**filter1000genomes.sh:**](filter1000genomes.sh) 
-  * **Arguments:** $1 is the dataset file and location and $2 is the name of the updated file (without file extension).
-  * **Additional Files:** VCF files in FASTA.
-  * **Additional Functions:** [vcftools](http://vcftools.sourceforge.net/)
-  * Transition:Transversion Ratio = (transition +1)/(transition + transversion + 2)
-  * **Output:** $2.csv is the original dataset with the new data added in.
-
-### Secondary structure conservation
-
-1. Use **calculate_CM.sh** to obtain the multiple sequence alignment files from multiz100way (UCSC). These files are then used to calculate CM and HMM using cmbuild.
-
-* [**calculate_CM.sh:**](calculate_CM.sh) 
-  * **Arguments:** $1 is the name of the dataset file (including location to file) and $2 is the name of the final combined file (eg: 181218dataset3)
-  * **Additional Scripts:** [conversion3.py](conversion3.py)
-  * **Additional Functions:** [mafFetch](http://hgdownload.soe.ucsc.edu/admin/exe/), [RNAalifold](https://www.tbi.univie.ac.at/RNA/), [R-scape](http://eddylab.org/R-scape/) and [cmbuild](http://eddylab.org/infernal/).
-  * **Output:** $2.csv is the original dataset with the new data added in.
-  
-### RNA-RNA Interactions
-
-1. Using NCBI Gene, download the text file for the "most relevant" promoters for protein coding genes, "most relevant" mRNA and "most relevant" ncRNA (eg: type ncRNA into NCBI Gene and download the results, alternatively the links for these are in the script filtergenes.sh). Using **filtergenes.py**, extract the sequences for the first 250 sequences for each of these groups.
-To geenerate the random sequences from your dataset, this python code can be run:
-
-```
-from Bio import SeqIO
-from random import sample
-import sys
-with open(sys.argv[1]) as f:
-    seqs = SeqIO.parse(f, "fasta")
-    samps = ((seq.name, seq.seq) for seq in  sample(list(seqs),250))
-    for samp in samps:
-        print(">{}\n{}".format(*samp))
-```
-
-* [**filtergenes.sh:**](filtergenes.py) 
-  * **Note:** this code uses a lot of memory.
-  * **Arguments:** $1 is the downloaded text file from NCBI, $2 is the name of your output (fasta).
-  * **Additional Files:** GRCh38_genome.csv.
-  * **Output:** fasta file containing sequence for the first 250 genes.
-
-2. Generate the test interaction database using the 750 genes from NCBI plus 250 random ncRNA from the test dataset. Will need to cat the four fasta files together into one before creating the interaction database.
-
-```
-cat promoter.fa protein-coding.fa ncrna-ncbi.fa ncrna-dataset.fa > interactionstest.fa 
-./risearch2.x -c interactionstest.fa -o interaction.suf
-```
-
-3. Use **risearch.sh** to calculate the number of interactions between the ncRNA dataset and the test interaction database.
-
-* [**risearch.sh:**](risearch.sh)
-  * **Arguments:** $1 is the name of the dataset file (including location to file) and $2 is the name of the final combined file (eg: 181218dataset3)
-  * **Additional Scripts:** [average.py](average.py)
-  * **Additional Files:** interaction.suf
-  * **Additional Functions:** [RIsearch2](https://rth.dk/resources/risearch/)
-  * **Output:** $2.csv is the original dataset with the new data added in.
-
-### Genomic Copy Number
-
-1. Create human genome database that can be used by command line blastn. First you need to download [GCF_000001405.38_GRCh38.p12_genomic.fna.gz](ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/001/405/GCF_000001405.38_GRCh38.p12) and unzip the file. Then format this file into a BLAST database.
-
-```
-makeblastdb -in GCF_000001405.38_GRCh38.p12_genomic.fna -dbtype nucl -parse_seqids -out human_genome
-```
-
-2. Use **filterblastn.sh** to take the ncRNA and blast them against the GRCh38.p12 reference genome.
-
-* [**Filterblastn.sh:**](filterblastn.sh)
-  * **Arguments:** $1 is the name of the dataset file (including location to file) and $2 is the name of the final combined file (eg: 181218dataset3)
-  * **Additional Functions:** [blastn](https://www.ncbi.nlm.nih.gov/books/NBK279690/)
-  * **Additional Files:** human_genome.*
-  * **Output:** $2.csv is the original dataset with the new data added in.
-
-
-
-### Analysis of functionality predictors
-
-1. Use **randomforest.R** to run RandomForest for x number of times and exports the importance, error and prediction values for each run.
-
-* [**randomforestx.R:**](randomforest.R)
-  * **Arguments:** location of original data, name of importance file, name of errors file, name of prediction file, number of time to repeat random forest.
-  * **Output:** Three CSV files corresponding to the importance of predictors across x models, error rates for predicting functionality across x models and the predictions made summed for all x models.
-
-2. Calculate the mean of each of these values (I did this in the original csv file but this could probably be incorporated into the R script) and input back into R to graph the results. 
-
-3. Graph the results in R using ggplot2. Can also create a [correlation plot](prettyCorrelation.R) of all the raw predictor data.
-
-```
-#Example: Plot of mean importance values; geom_hline should correspond to the "Start" predictor which represents neutral. Make sure the data is ordered from smallest to largest so that the plot is ordered logically.
-
-ggplot(RF1, aes(x=Importance, y=Predictor))+geom_point()+ylab('')+xlab('Mean Variable Importance for 100 runs')+theme(text=element_text(size=18))+geom_line()+geom_hline(yintercept=17,color="Red")
-```
-
-```
-#Example: Plot of ncRNA for specific predictors as a boxplot and scatter, which is seperated into functional (blue) and non-functional (red) ncRNA.
-
-allData <- read.csv(“190131nullRF1.csv, header=TRUE)
-fun <-data.frame(allData$Functionality, stringsAsFactors=FALSE)
-CMs <- scale(allData$CM.scan)
-test1<-cbind(fun,CMs)
-CMb <- scale(allData$CM.build)
-test14 <- cbind(fun,CMb)
-test1<-cbind(fun,CMs)
-test1$newcolumn <- "CM (CMscan)"
-test14$newcolumn <- "CM (CMbuild)"
-colnames(test1) <- c("Functionality", "Zscore","Predictor")
-colnames(test14) <- c("Functionality", "Zscore","Predictor")
-CMcompare <- rbind(test1,test14)
-CMcompare$Predictor <- factor(CMcompare$Predictor,  levels=unique(CMcompare$Predictor))
-
-qplot(data=CMcompare, x=Predictor, y=Zscore, geom=c("boxplot"), outlier.shape = NA) + geom_jitter(shape = 1, aes(colour=Functionality))+scale_color_manual(values=c("indianred2","cyan3"))+theme(text=element_text(size=22))+ylim(low=-2.7,high=5)+theme(legend.position="none")
-```
-
-**OR**
-  
-1. Use **rftest.R** to run RandomForest for x number of times using only a subset of the dataset being used as the testData (ie: predict specific types of ncRNA).
-
-* [**rftest.R:**](RFtest.R)
-  * **Arguments:** location of original data that wasn’t part of the testData, location of data that is part of the testData (70% will also be included in the trainData), name of prediction file, number of times to repeat random forest.
-  * **Output:** One CSV file corresponding to the summed predictions made for all x models.
-  
