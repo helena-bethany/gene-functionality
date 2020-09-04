@@ -3,10 +3,10 @@
 # Script Name: feature-generation.sh
 #
 # Author: Helena Cooper
-# Last edited: 30/07/2020
+# Last edited: 04/09/2020
 #
-# Description: This script calculates all chosen features of functions for protein-coding exons, lncRNA exons, short ncRNA 
-#              and non-coding regions of the human genome.
+# Description: This script calculates all chosen features of functions for protein-coding exons, lncRNA exons, short ncRNAs 
+#              and negative control sequences.
 #
 # Input: $1 is the file identifier for the dataset and fasta file. Eg: 200702-functional-ncrna
 #        $2 is the location of the folder with the local databases/datasets or version specific executables
@@ -253,9 +253,16 @@ else
     exit 1
 fi
 
-read -p "Enter path for Boost C++ lib folder for IntaRNA: " lib_directory
-echo
-if [ -d $lib_directory/ ] ; then : ; else echo Please check that the Boost C++ lib directory is correct. ; exit 1 ; fi
+intaRNA_error=$( $IntaRNA_exe -h 2>&1 )  # Need to find out if Boost library needs to be defined separately for IntaRNA to run
+
+if [ ! -z "$error" ] && [[ "$error" != "IntaRNA predictors RNA-RNA interactions"* ]]
+then
+    read -p "Enter path for Boost C++ lib folder for IntaRNA: " lib_directory
+    echo
+    if [ -d $lib_directory/ ] ; then : ; else echo Please check that the Boost C++ lib directory is correct. ; exit 1 ; fi
+else
+    :
+fi
 
 ######## blastn
 
@@ -330,9 +337,14 @@ fi
 
 ######## CPC2
 
-read -p "Enter path to installed CPC2 bin: " cpc2_directory
-echo
-if [ -d $cpc2_directory/ ] ; then : ; else echo Please check that CPC2 is installed. ; exit 1 ; fi
+if [ -f $additional_folder/CPC2.py ]
+then
+    cpc2_directory=$additional_folder/CPC2.py
+else
+    read -p "Enter path to installed CPC2 bin: " cpc2_directory
+    echo
+    if [ -d $cpc2_directory/ ] ; then : ; else echo Please check that CPC2 is installed. ; exit 1 ; fi
+fi
 
 ############################################################################################################################
 
@@ -563,7 +575,19 @@ rm -rf snps.file
 run_popgenome() {
 
 R --save << RSCRIPT
-library(PopGenome)
+
+######## If PopGenome not install, install package. Otherwise load required library.
+packages <- "PopGenome"
+
+package.check <- lapply(
+  packages,
+  FUN = function(x) {
+    if (!require(x, character.only = TRUE)) {
+      install.packages(x, dependencies = TRUE)
+      library(x, character.only = TRUE)
+    }
+  }
+)
 
 ######## Make sure the FASTA folder only contains the VCF files
 genome.class <- readData("FASTA", format="VCF",gffpath=FALSE)
@@ -883,8 +907,13 @@ echo InteractionMIN,InteractionAVE > interaction-intermediate.csv
 for seq in $( grep ">" $initial_fasta )
 do
     grep -A 1 $seq $initial_fasta > target.fa
-    LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$lib_directory $IntaRNA_exe -q target.fa -t $interaction_database > intaRNA-results 2>>errors.log
-
+    if [ -z "$lib_directory" ]   # If Boost library didn't have to specified, run as normal.
+    then
+        $IntaRNA_exe -q target.fa -t $interaction_database > intaRNA-results 2>>errors.log
+    else
+        LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$lib_directory $IntaRNA_exe -q target.fa -t $interaction_database > intaRNA-results 2>>errors.log
+    fi 
+    
     ######## Grab all recorded interactions
     grep "interaction energy" intaRNA-results | cut -d '=' -f 2 | tr -d "kcal/mol" | tr -d ' ' > kcal_mol
 
@@ -1147,7 +1176,8 @@ rm -rf MFE.csv
 
 ######## Fickett score calculation (python script so cannot be added to $PATH)
 
-python3 $cpc2_directory/CPC2.py -i $initial_fasta -o output >/dev/null 2>>errors.log
+python2 $cpc2_directory/CPC2.py -i $initial_fasta -o output >/dev/null 2>>errors.log    # Original version
+#python3 $cpc2_directory/CPC2.py -i $initial_fasta -o output >/dev/null 2>>errors.log   # Uses updated biopython packages
 cat output.txt | cut -f 4 > CPC2.csv
 rm -rf output.txt
 
