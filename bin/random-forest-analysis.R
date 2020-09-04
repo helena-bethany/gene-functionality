@@ -16,11 +16,19 @@
 
 #set.seed(1000)   # Reproducibility while debugging
 
-######## Required packages
-library(randomForest)
-library(epiR)
-library(pROC)
-library(mltools)
+######## Specify requried packages 
+packages <- c("randomForest", "epiR","pROC", "mltools")
+
+######## Now load or install&load all
+package.check <- lapply(
+  packages,
+  FUN = function(x) {
+    if (!require(x, character.only = TRUE)) {
+      install.packages(x, dependencies = TRUE)
+      library(x, character.only = TRUE)
+    }
+  }
+)
 
 ######## Function for calculating the F1 score from confusion matrix (data)
 
