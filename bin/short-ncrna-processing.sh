@@ -3,7 +3,7 @@
 # Script Name: short-ncrna-processing.sh
 #
 # Author: Helena Cooper
-# Last edited: 30/06/2020
+# Last edited: 20/09/2020
 #
 # Description: This script filters the functional short ncRNAs and generates negative control sequences. 
 #
@@ -85,10 +85,10 @@ done
 ######## Generate functional dataset
 echo ID,Functional,Chromosome,Start,End,Sequence > $d-functional-ncrna-dataset.csv
 
-if [ "$count" -gt "1000" ]  # If more than 1000 sequences, choose a random subset of 1000
+if [ "$count" -gt "1000" ]  # Filter for processing precursor miRNAs
 then
     max=$( cat ncrna-dataset | wc -l )
-    shuf -i 1-$max -n 1000 > numbers
+    shuf -i 1-$max -n 89 > numbers   # Change this value depending on how many precursor miRNAs should be processed
     id_count=1
     for line in $( cat numbers )
     do
