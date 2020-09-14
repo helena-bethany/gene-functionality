@@ -1,7 +1,7 @@
 # Script Name: random-forest-analysis.R
 #
 # Author: Helena Cooper
-# Last edited: 27/08/2020
+# Last edited: 15/09/2020
 #
 # Description: This script runs randomForest 100 times and calculates the performance metrics for these models.
 #
@@ -77,7 +77,7 @@ randomforestx <- function(file1){
   total <- round(importance(data.rf),4)   # Gini variable importance values
   err <- data.rf$err.rate[1000,]          # OOB errors
   dataPred <- predict(data.rf, newdata=testData)   # Predictions from model
-  pred <- table(dataPred,testData$Functionality)   # Confusion table
+  pred <- table(dataPred,testData$Functional)   # Confusion table
   
   # MCC calculation
   mcc_input <- cbind(dataPred,testData$Functional)  # Prediction and actual functionality for testData
@@ -126,7 +126,7 @@ randomforestx <- function(file1){
     err2 <- data.rf$err.rate[1000,]          # OOB errors
     err <- rbind(err,err2)   # Append new OOB errors to those from previous models
     dataPred <- predict(data.rf, newdata=testData)   # Predictions from model
-    pred2 <- table(dataPred,testData$Functionality)   # Confusion table
+    pred2 <- table(dataPred,testData$Functional)   # Confusion table
     pred <- pred + pred2  # Sum new confusion tables with those from previous models
     
     # MCC calculation
