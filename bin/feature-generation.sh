@@ -3,7 +3,7 @@
 # Script Name: feature-generation.sh
 #
 # Author: Helena Cooper
-# Last edited: 04/09/2020
+# Last edited: 23/09/2020
 #
 # Description: This script calculates all chosen features of functions for protein-coding exons, lncRNA exons, short ncRNAs 
 #              and negative control sequences.
@@ -120,16 +120,54 @@ else
     until [ -f $phast_bw ] ; do read -p "Please enter custom name of hg38 conservation scoring by phastCons (bigWig): " phast ; phast_bw=$additional_folder/$phast ; echo ; done
 fi
 
-######## ENCODE RNA-seq BAM files for samtools
+######## gnomAD VCF file
 
-bam_total=$( ls $additional_folder/*.bam | wc -l )
-if [[ $bam_total -eq 12 ]]
+if [ -f $additional_folder/gnomad.genomes.r3.0.sites.vcf.bgz ] 
+then
+    gnomad_database=$additional_folder/gnomad.genomes.r3.0.sites.vcf.bgz
+else
+    until [ -f $gnomad_database ] ; do read -p "Please enter custom name of gnomAD SNP database (vcf.bz): " i ; gnomad_database=$addition
+al_folder/$i ; echo ; done
+fi
+
+######## Local bigwig file of 111 mammal GERP scores for BigWigSummary
+
+if [ -d $additional_folder/gerp-mammals-index/ ] && [ -f $additional_folder/gerp-mammals-index/gerp1.bed.gz ] 
+then
+    mammals_bed=$additional_folder/gerp-mammals-index
+else
+    until [ -f $mammals_bed ] ; do read -p "Please enter custom name of sorted 111 mammal GERP scores (bedgraph): " mammal ; mammals_bed=
+$additional_folder/$mammal ; echo ; done
+fi
+
+######## ENCODE Tissue Total & Small RNASeq BAM files for samtools
+
+tissue=$( ls $additional_folder/ENCODE-tissue/*.bam | wc -l )
+tissue_bam=$( ls $additional_folder/ENCODE-tissue/*.bam.bai | wc -l )
+tissue_max=$( cat $additional_folder/ENCODE-tissue/total-read-count.txt | wc -l )
+
+if [[ $tissue -eq $tissue_bam ]] && [ -f $additional_folder/ENCODE-tissue/total-read-count.txt ] && [[ $tissue -eq $tissue_max ]]
 then
     :
 else
-    echo "Please confirm you have all 12 ENCODE Total RNA-Seq bam files downloaded."
+    echo "Please confirm you have Tissue RNASeq BAM files downloaded from ENCODE."
     echo
     exit 1 
+fi
+
+######## ENCODE Primary Cell Total & Small RNA-seq BAM files for samtools
+
+primary_cell=$( ls $additional_folder/ENCODE-primary-cell/*.bam | wc -l )
+primary_bam=$( ls $additional_folder/ENCODE-primary-cell/*.bam.bai | wc -l )
+primary_max=$( ls $additional_folder/ENCODE-primary-cell/total-read-count.txt | wc -l )
+
+if [[ $primary_cell -eq $primary_bam ]] && [ -f $additional_folder/ENCODE-primary-cell/total-read-count.txt ] && [[ $primary_cell -eq $primary_max ]]
+then
+    :
+else
+    echo "Please confirm you have Primary Cell RNASeq BAM files downloaded from ENCODE."
+    echo
+    exit 1
 fi
 
 ###########################################################################################################################
@@ -409,6 +447,7 @@ else
             until $tabix_exe -f -h ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/ALL.chr$chr.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz $line > $name.vcf 2>>tabix.log ; do echo Downloading $name.vcf >> tabix.log ; echo >> tabix.log ; done
         fi
 
+        ######## Move VCF so it doesn't need to be redownloaded.
         mv $name.vcf \FASTA
         var=$((var+1))
         rm -rf text.file
@@ -423,36 +462,29 @@ rm -rf unlifted.bed
 
 ############################################################################################################################
 
-# Calculate transitions:transversions ratio and minor allele frequency.
+# Calculate SNP count, SNP density and minor allele frequency (1kGP).
 
 ############################################################################################################################
 
-######## Specify location of VCF files
-FILES=./FASTA/
-data=$(ls $FILES | sort -V)
-
-######## Define nucleotides as variables
-A='A'
-G='G'
-T='T'
-C='C'
-
 ######## Loop through VCF files to calculate features
-echo TTratio,aveMAF > 1000g-freqsummary.csv
+echo 1000G_SNPs,1000G_SNPsDensity,aveMAF > 1000g-freqsummary.csv
 
-for f in $data
+for line in $( grep -v "Start" $initial_data )
 do
+    ######## Extract relevant information
+    ID=$( echo $line | cut -d ',' -f 1 )   # ID for calling correct VCF file
+    start=$( echo $line | cut -d ',' -f 4 )  # Start position
+    end=$( echo $line | cut -d ',' -f 5 )    # End position
+    len=$( calc $end-$start )   # Sequence length
+
     ######## Determine SNP frequencies for each ncRNA sequence
     $vcftools_exe --vcf FASTA/$f --freq --out freq-afr &> /dev/null
 
     ######## Extract each SNP at frequency observed at that position into a parsable format
     grep -v "CHROM" freq-afr.frq | cut -f 5,6 | perl -lane '{print "$F[0]:$F[1]"}' > snps.file
-    a=0  # No. of transitions
-    b=0  # No. of transversion
     total=0   # No. of SNPs observed
     count=$(grep -v "CHROM" freq-afr.frq | wc -l)   # Maximum data available
-    max=0    # Max MAF observed
-    min=0.9  # Min MAF observed
+    min=0.99  # Min MAF observed
 
     for line in $(cat snps.file)
     do
@@ -465,16 +497,10 @@ do
             snpa=$(echo $line | cut -d ':' -f 1,3 | tr ":" " " | perl -lane '{print "$F[0]"}')
             snpb=$(echo $line | cut -d ':' -f 1,3 | tr ":" " " | perl -lane '{print "$F[1]"}')
             maf=$(echo $line | cut -d ":" -f 4)
-            total=$(calc $total+$maf)
             ######## If the maximum is recorded as zero, set the new values automatically as the max
             if (( $(echo "$max == 0" | bc -l) ))
             then
                 min=$maf
-                max=$maf
-            ######## If the new SNP analysed has a frequency greater than the recorded max, update the max
-            elif (( $(echo "$maf > $max" | bc -l) ))
-            then
-                max=$maf
             ######## If the new SNP analysed has a frequency smaller than the recorded min, update the min
             elif (( $(echo "$maf < $min" | bc -l) ))
             then
@@ -482,158 +508,27 @@ do
             else
                 :
             fi
-            ######## Counts the number of transitions and transversions
-            if [ "$snpa" == "$G" ]
-            then
-                if [ "$snpb" == "$A" ]
-                then
-                    a=$((a+1))
-                elif [ "$snpb" == "$T" ]
-                then
-                    b=$((b+1))
-                elif [ "$snpb" == "$C" ]
-                then
-                    b=$((b+1))
-                else
-                    :
-                fi
-            elif [ "$snpa" == "$A" ]
-            then
-                if [ "$snpb" == "$G" ]
-                then
-                    a=$((a+1))
-                elif [ "$snpb" == "$T" ]
-                then
-                    b=$((b+1))
-                elif [ "$snpb" == "$C" ]
-                then
-                    b=$((b+1))
-                else
-                    :
-                fi
-            elif [ "$snpa" == "$C" ]
-            then
-                if [ "$snpb" == "$T" ]
-                then
-                    a=$((a+1))
-                elif [ "$snpb" == "$A" ]
-                then
-                    b=$((b+1))
-                elif [ "$snpb" == "$G" ]
-                then
-                    b=$((b+1))
-                else
-                    :
-                fi
-            elif [ "$snpa" = "$T" ]
-            then
-                if [ "$snpb" == "$C" ]
-                then
-                    a=$((a+1))
-                elif [ "$snpb" == "$A" ]
-                then
-                    b=$((b+1))
-                elif [ "$snpb" == "$G" ]
-                then
-                    b=$((b+1))
-                else
-                    :
-                fi
-            else
-                :
-            fi
         fi
     done
-
-    ######## Prevents a division by zero if no SNPs were present, include NA instead.
-    if (( $(echo "$count == 0" | bc -l) ))
+    
+    ######## SNP count and Density
+    count=$( grep -v "CHROM" freq-afr.frq | wc -l )  # SNP Count
+    if [[ "$count" == "0" ]] || [ -z "$count" ]   # If no SNPs were recorded, set everything to NA
     then
-        average=NA
+        $count=NA
+        $density=NA
+        $average=NA
     else
-        average=$( calc $a+1 )
+        density=$( calc $density/$len )   # SNP Density
     fi
 
-    ######## Calculate transitions:transversion ratio
-    top=$(calc $a+1)
-    bottom=$(calc $a+$b+2)
-    if [[ $a -eq 0 ]] && [[ $b -eq 0 ]] ; then ratio=NA ; else ratio=$( calc $top/$bottom ) ; fi 
-    echo $ratio,$average >> 1000g-freqsummary.csv
+    echo $count,$density,$average >> 1000g-freqsummary.csv
 
 done
-
-rm -rf line
-rm -rf snps.file
-
-############################################################################################################################
-
-# Obtain population statistics from VCF files
-
-############################################################################################################################
-
-######## Function for calculating population statistics in R
-
-run_popgenome() {
-
-R --save << RSCRIPT
-
-######## If PopGenome not install, install package. Otherwise load required library.
-packages <- "PopGenome"
-
-package.check <- lapply(
-  packages,
-  FUN = function(x) {
-    if (!require(x, character.only = TRUE)) {
-      install.packages(x, dependencies = TRUE)
-      library(x, character.only = TRUE)
-    }
-  }
-)
-
-######## Make sure the FASTA folder only contains the VCF files
-genome.class <- readData("FASTA", format="VCF",gffpath=FALSE)
-genome.class <- neutrality.stats(genome.class)
-dataset <- get.neutrality(genome.class)[[1]]
-
-subset <- dataset[,c(1,2,4,5)]
-write.csv(subset,"neutrality-stats.csv")
-RSCRIPT
-
-}
-
-############################################################################################################################
-
-######## Calculate Tajima's D and Fu and Li's D using R
-run_popgenome &> /dev/null
-
-######## Change title to make it more readable
-cat neutrality-stats.csv | cut -d ',' -f 2,3,4,5 > stats
-sed -i 's/n.segregating.sites/SNPsCount_1000G/g' stats
-sed -i 's/"Tajima.D"/Tajima_D/g' stats
-sed -i 's/"Fu.Li.D"/Fu_Li_D/g' stats 
-paste -d ',' $initial_data stats > vcfstats.csv
-
-echo SNPsDensity_1000G > snps-average
-
-######## Calculate average number of SNPs per ncRNA
-for line in $( grep -v "Start" vcfstats.csv )
-do
-    chr=$( echo $line | cut -d ',' -f 3 )
-    start=$( echo $line | cut -d ',' -f 4 )
-    end=$( echo $line | cut -d ',' -f 5 )
-    snp=$( echo $line | rev | cut -d ',' -f 3 | rev )
-    length=$(( $end - $start ))
-    average=$( calc $snp/$length )
-    [[ $snp -eq 0 ]] && average=NA
-    echo $average >> snps-average
-done
-
-paste -d ',' stats snps-average > 1000g-popstats.csv
 
 ######## Delete and move excess files
-rm -rf stats
-mv snps-average additional-output/
-mv neutrality-stats.csv additional-output/
-mv vcfstats.csv additional-output/
+rm -rf line
+rm -rf snps.file
 rm -rf ALL.*.vcf.gz.tbi
 rm -rf coordinates
 rm -rf freq-afr.*
@@ -641,6 +536,56 @@ rm -rf freq-afr.*
 ######## Zip VCF files for further analyses
 zip -r FASTA FASTA &> /dev/null
 rm -rf FASTA/
+
+############################################################################################################################
+
+# Obtain VCF Files from gnomAD.
+
+############################################################################################################################
+
+######## Obtain VCF Files
+rm -rf coordinates
+
+######## Alter count according to what number the RNA IDs start at
+max=$( tail -1 $initial_data | cut -d ',' -f 1 | tr -d RNA )
+var=$( head -2 $initial_data | tail -1 | cut -d ',' -f 1 | tr -d RNA )
+count=1
+
+######## Reformat chromosome coordinates for to obtain hg19 coordinates
+grep -v 'Chromosome' $initial_data | cut -d ',' -f 3,4,5 | tr ',' ' ' | perl -lane '{print "$F[0]:$F[1]-$F[2]"}' > coordinates
+
+######## Headers
+echo gnomAD_SNP_count,gnomAD_SNP_density,gnomAD_avg_MAF > gnomad.csv
+
+######## Downloaded VCF files according to hg19 chromosome coordinates
+for line in $( cat coordinates )
+do
+
+    name='RNA'$var
+    start=$( echo $line | cut -d ":" -f 2 | cut -d "-" -f 1 )
+    end=$( echo $line | cut -d ":" -f 2 | cut -d "-" -f 2 )
+    len=$( calc $end-$start )
+
+    until $tabix_exe -f -h $gnomad_database $line > $name.vcf 2>>tabix.log ; do echo Downloading $name.vcf >> tabix.log ; echo >> tabix.log ; done
+
+    count=$( grep -v "#" $name.vcf | wc -l )
+    density=$( calc $count/$len )
+    maf=0
+        
+    for snp in $( grep -v "#" $name.vcf )
+    do
+        af=$( echo $snp | cut -f 8 | cut -d ';' -f 3 | tr -d "AF=" )
+        maf=$( calc $maf+$af )
+    done
+
+    [[ "$count" -eq 0 ]] && avg_maf=NA || avg_maf=$( calc $maf/$count )
+
+    [[ "$count" -eq 0 ]] && echo NA,NA,NA >> $date-gnomad.csv || echo $count,$density,$avg_maf >> gnomad.csv
+
+    rm -rf $name.vcf
+    var=$((var+1))
+
+done
 
 ############################################################################################################################
 
@@ -751,22 +696,25 @@ rm -rf *.stk
 
 echo RNAcode_score,RNAalifold_score > rnacode.csv
 echo MeanPhyloP,MaxPhyloP,MeanPhastCons,MaxPhastCons > conservation.csv
+echo mammals_mean_gerp,mammals_max_gerp > gerp.csv
 
 for line in  $(cat coordinates)
 do
         ######## Format data for phastCons and phyloP
-        echo $line > overBed
-        chr=$( echo $line | cut -d ' ' -f 1 )
-        start=$( echo $line | cut -d ' ' -f 2 )
-        end=$( echo $line | cut -d ' ' -f 3 )
+        echo $line > overBed      # Input for mafFetch (Multiple Alignments)
+        echo $line > input.bed    # Input for bedtools (GERP)
+        chr=$( echo $line | cut -d ' ' -f 1 )   # Formatting for bigWigSummary
+        chromo=$( echo $line | cut -f 1 )       # Formatting for bedtools
+        start=$( echo $line | cut -d ' ' -f 2 ) # Formatting for bigWigSummary
+        end=$( echo $line | cut -d ' ' -f 3 )   # Formatting for bigWigSummary
         
-        ######## Obtain phastCons and phyloP values for each set of chromosome coordinates
+        ######## Obtain phastCons (pc) and phyloP (pp) values for each set of chromosome coordinates
         mean_pp=$( $bigWigSummary_exe -type=mean $phylo_bw $chr $start $end 1 2>&1 )
         max_pp=$( $bigWigSummary_exe -type=max $phylo_bw $chr $start $end 1 2>&1 )
         mean_pc=$( $bigWigSummary_exe -type=mean $phast_bw $chr $start $end 1 2>&1 )
         max_pc=$( $bigWigSummary_exe -type=max $phast_bw $chr $start $end 1 2>&1 )
 
-        ######## Convert any missing data to NAs
+        ######## Convert any missing data to NAs (mean = mn, max = mx, phyloP = p, phastCons = c)
         test_mnp=$( echo $mean_pp | wc -w )
         if [[ "$test_mnp" -eq "1" ]] ; then : ; else mean_pp=NA ; fi
  
@@ -781,6 +729,17 @@ do
 
         echo $mean_pp,$max_pp,$mean_pc,$max_pc >> conservation.csv
         
+        ######## Obtain GERP Scores for each set of chromosome coordinates
+        mammal_output=$( $bedtools_exe map -a input.bed -b $mammals_bed/gerp$chr.bed.gz -c 4,4 -o mean,max -sorted 2>>/dev/null)
+        mean_mammal=$( echo $mammal_output | cut -f 4 )   # Mean GERP Score
+        max_mammal=$( echo $mammal_output | cut -f 5 )    # Max GERP Score
+
+        ######## Convert any missing data to NAs
+        if [[ ! "$mean_mammal" == "." ]] ; then : ; else mean_mammal=NA ; fi
+        if [[ ! "$max_mammal" == "." ]] ; then : ; else max_mammal=NA ; fi
+
+        echo $mean_mammal,$max_mammal >> gerp.csv
+ 
         ######## Obtain MSA files from multiz100way, unless they've already been downloaded
         rna_id='RNA'$var
         if [ -f maf/$rna_id.maf ]
@@ -851,7 +810,7 @@ rm -rf maf/
 
 ############################################################################################################################
 
-echo Max_covariance,Sum_covariance > rscape-dataset.csv
+echo Max_covariance,Min_covariance_Eval > rscape-dataset.csv
 
 ######## Counter to process each rscape file individually and in order
 total_rna=$( tail -1 $initial_data | tail -1 | cut -d ',' -f 1 | tr -d RNA )
@@ -862,20 +821,16 @@ do
         if [ -f rscapedata/RNA$count_file.cov ] && [ -s rscapedata/RNA$count_file.cov ]  # Check file exists and is not empty
         then
             f=./rscapedata/RNA$count_file.cov
-            max=$(grep -r 'GTp' $f | cut -d '[' -f 2 | tr ']' ',' | cut -d ',' -f 2)
-            grep -v "#" $f | cut -f 4 > score
-            sum=0
-            
-            ######## Sum over all covariance
-            for number in $( cat score ) ; do sum=$(calc $sum+$number) ; done
-            echo $max,$sum > info
-
+            max=$(grep -r 'GTp' $f | cut -d '[' -f 2 | tr ']' ',' | cut -d ',' -f 2)  # Max covariance observed
+            min=$( grep -v "#" $file | cut -f 4 | sort -n | head -1 | tr -d '-' )  # Min covariance observed
+            eval=$( grep -m 1 "$min" $file | cut -f 5 )  # E-val of min covariance
+            [[ "$eval" == "no significant pairs" ]] && eval=NA   
+            echo $max,$eval >> rscape-dataset.csv
         else
             ######## If no covariance calculated/no data available
-            echo NA,NA > info
+            echo NA,NA >> rscape-dataset.csv
         fi
-
-        cat info >> rscape-dataset.csv
+        
         count_file=$(( $count_file + 1 ))
 
 done
@@ -1061,48 +1016,62 @@ mv snp-intersection-average.csv additional-output/
 
 ############################################################################################################################
 
-# Extracting expression for a region across 12 ENCODE datasets
+# Extracting expression for a region across Total & Small ENCODE datasets
 
 ############################################################################################################################
 
-grep -v "Start" $initial_data | cut -d ',' -f 3,4,5 | tr ',' ' ' | perl -lane '{print "$F[0]:$F[1]-$F[2]"}' > locations
+run_encode() {
 
-echo CountAverage,MaxReadDepth > encode-rnaseq.csv
+name=$2
+
+echo RPKM_$name,MRD_$name > $name-rnaseq.csv
 
 ######## Define location of downloaded ENCODE RNAseq data
-encode_data=$( ls $additional_folder/*.bam )
+encode_data=$1/*.bam
 
 for line in $(cat locations)
 do
-    ######## Record read counts across all RNAseq files
-    count_sum=0 
-    for file in $encode_data ; do read=$( $samtools_exe view -c $file $line 2>>errors.log ) ; count_sum=$(( $count_sum+$read )) ; done 
-
-    ######## Determine max read depth
-    max_depth=0
-    for file in $encode_data
-    do 
-        max=$( $samtools_exe depth -r $line $file 2>>errors.log | cut -f 3 | sort -V | tail -1 )
-        if [[ $max -gt $max_depth ]] ; then max_depth=$max ; else : ; fi
-    done
-
-    [ -z "$max_depth" ] && max_depth=0    # record MRD as zero rather than blank
 
     ######## Determine sequence length
     start=$( echo $line | cut -d ':' -f 2 | cut -d '-' -f 1 )
     end=$( echo $line | cut -d ':' -f 2 | cut -d '-' -f 2 )
     length=$(calc $end-$start)
+    length_kb=$( calc $length/1000 )  # Convert to Kb
+
+    ######## Record RPKM and MRD across all RNAseq files
     
-    ######## Calculate average RNAseq counts
-    count_average=$( calc $count_sum/12 )
-    count_ave=$( calc $count_average/$length )
+    count_max=0  # Variable for recording the maximum RPKM observed
+    max_depth=0  # Variable for recording the maximum MRD observed
 
-    if [ -z "$count_average" ] ; then count_average=NA ; max_depth=NA ; else : ; fi
-    if [ -z "$count_ave" ] ; then count_ave=NA ; max_dpeth=NA ; else : ; fi
+    for file in $encode_data  # Loop through all RNAseq datasets
+    do 
+        read=$( $samtools_exe view -c $file $line 2>>errors.log )   # Number of reads for sequence of interest
+        file_name=$( echo $file | rev | cut -d '/' -f 1 | rev )     # ID for RNAseq dataset
+        total_read=$( grep "$file_name" $1/total-read-count.txt | cut -d ',' -f 2 )   # Obtain total number of reads for specific RNAseq dataset (precomputed to save time)
+        scaling=$( calc $total_read/1000000 )   # Create the "by per million" scaling 
+        rpm=$( calc $read/$scaling )    # Reads per million
+        rpkm=$( calc $rpm/$length_kb )  # Final RPKM calculation
+        # If RPKM is greater than previously recorded, then overwrite the variable.
+        if (( $(echo "$rpkm > $count_max" | bc -l) )) ; then count_max=$rpkm ; else : ; fi
+        
+        max=$( $samtools_exe depth -r $line $file 2>>errors.log | cut -f 3 | sort -V | tail -1 )  # Maximum Read Depth
+        # If MRD is greater than previously recorded, then overwrite the variable.
+        if [[ $max -ge $max_depth ]] ; then max_depth=$max ; else : ; fi
+    done 
 
-    echo $count_ave,$max_depth >> encode-rnaseq.csv
+    [ -z "$max_depth" ] && max_depth=0    # Record MRD as zero rather than blank
+    if [ -z "$count_max" ] ; then count_max=NA ; max_depth=NA ; else : ; fi   # But if no transcription whatsoever, set everything to NA 
+
+    echo $count_max,$max_depth >> $name-rnaseq.csv
 
 done
+
+}
+
+grep -v "Start" $initial_data | cut -d ',' -f 3,4,5 | tr ',' ' ' | perl -lane '{print "$F[0]:$F[1]-$F[2]"}' > locations
+
+run_encode $additional_folder/ENCODE-tissue tissue
+run_encode $additional_folder/ENCODE-primary-cell primary-cell
 
 rm -rf locations
 
@@ -1191,15 +1160,15 @@ rm -rf output.txt
 date=$(date +%y%m%d)
 name=$( echo $initial_data | cut -d '-' -f 2,3 )
 
-paste -d ',' $initial_data 1000g-freqsummary.csv 1000g-popstats.csv rscape-dataset.csv interaction-intermediate.csv copy-number.csv encode-rnaseq.csv GC.csv MFE-final.csv access.csv rnacode.csv ncrna-dfam-distance.csv conservation.csv CPC2.csv > $date-$name-final-dataset.csv
+paste -d ',' $initial_data 1000g-freqsummary.csv rscape-dataset.csv interaction-intermediate.csv copy-number.csv tissue-rnaseq.csv primary-cell-rnaseq.csv GC.csv MFE-final.csv access.csv rnacode.csv ncrna-dfam-distance.csv conservation.csv CPC2.csv gerp.csv gnomad.csv > $date-$name-final-dataset.csv
 
 ######## Move previous files to folder, in case there was an issue during feature calculation
 mv 1000g-freqsummary.csv additional-output/
-mv 1000g-popstats.csv additional-output/
 mv rscape-dataset.csv additional-output/
 mv interaction-intermediate.csv additional-output/
 mv copy-number.csv additional-output/
-mv encode-rnaseq.csv additional-output/
+mv tissue-rnaseq.csv additional-output/
+mv primary-cell-rnaseq.csv additional-output/
 mv GC.csv additional-output/
 mv MFE-final.csv additional-output/
 mv access.csv additional-output/
@@ -1208,6 +1177,8 @@ mv rnafold-output additional-output/
 mv ncrna-dfam-distance.csv additional-output/
 mv conservation.csv additional-output/
 mv CPC2.csv additional-output/
+mv gerp.csv additional-output/
+mv gnomad.csv additional-output/
 
 #####################################################################
 
