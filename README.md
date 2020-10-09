@@ -1,6 +1,4 @@
-# Features of functional human genes.
-
-### Supplementary Materials and Methods
+# Features of Functional Human Genes.
 
 * [Required dependencies](#required-dependencies)
 
@@ -20,7 +18,7 @@
 
 * [Population variation features](#population-variation-features)
 
-* [Analysis of potential functionality predictors](#analysis-of-potential-functionality-predictors)
+* [Analysis of potential functionality features](#analysis-of-potential-functionality-features)
 
 * [References](#references)
 
@@ -67,7 +65,7 @@ grep -v "mitochondrially encoded\|Entry Withdrawn\|Yq" gene_with_protein_product
 
 ##### Short and long ncRNA (RNAcentral)
 
-To obtain the chromosome coordinates for each RNAcentral ncRNA, the Homo sapiens GRCh38 bed file was obtained from the RNAcentral FTP directory, which contains the chromosome coordinates for all human ncRNA (The RNAcentral Consortium et al., 2017). The [RNAcentral web interface](https://rnacentral.org/) was used to obtain the ncRNA data and used the following filtering steps:
+To obtain the chromosome coordinates for each RNAcentral ncRNA, the Homo sapiens GRCh38 bed file was obtained from the RNAcentral FTP directory, which contains the chromosome coordinates for all human ncRNAs (The RNAcentral Consortium, 2019). The [RNAcentral web interface](https://rnacentral.org/) was used to obtain the ncRNA data and used the following filtering steps:
 
 * Short ncRNA: include HGNC database, exclude precursor miRNA/primary transcript, exclude rRNA, exclude lncRNA.
 
@@ -89,7 +87,7 @@ shuf -i 1-$max -n 89 > numbers
 
 ### Negative control sequences
 
-The chromosome coordinates and sequence for the final negative control protein-coding, short ncRNA and lncRNA sequences are available in [data](data/). To generate these negative control sequences, the [human genome](https://www.ncbi.nlm.nih.gov/genome/guide/human/) from NCBI (O'Leary et al., 2016) was converted to a tab delimited CSV file using the FASTA formatter from [FASTX-Toolkit version 0.0.13](http://hannonlab.cshl.edu/fastx_toolkit/), with scaffolds and alternative chromosomes removed, to allow for easier manipulation and parsing. 
+The chromosome coordinates and sequences for the final negative control protein-coding, short ncRNA and lncRNA genes are available in [data](data/). To generate these negative control sequences, the [human genome](https://www.ncbi.nlm.nih.gov/genome/guide/human/) from NCBI (O'Leary et al., 2016) was converted to a tab delimited CSV file using the FASTA formatter from [FASTX-Toolkit version 0.0.13](http://hannonlab.cshl.edu/fastx_toolkit/), with scaffolds and alternative chromosomes removed, to allow for easier manipulation and parsing. 
 
 ```
 # Download and unzip GFF file for human genome
@@ -107,10 +105,10 @@ fasta_formatter -i GCF_000001405.39_GRCh38.p13_genomic.fna.gz -o GRCh38_interim.
 grep "NC_" GRCh38_interim.csv > GRCh38.p13_genome.csv
 ```
 
-Both SwissProt and GENCODE annotations are used to filter negative control sequences which overlap with known protein-coding and ncRNAs, which was done using ```bedtools intersect``` (Haeussler et al., 2019; Harrow et al., 2012; Quinlan, 2014).
+Both Swiss-Prot and GENCODE annotations are used to filter negative control sequences which overlap with known protein-coding and ncRNAs, which was done using ```bedtools intersect``` (Haeussler et al., 2019; Harrow et al., 2012; Quinlan, 2014).
 
 ```
-# Downloading SwissProt annotations of known protein-coding genes
+# Downloading Swiss-Prot annotations of known protein-coding genes
 wget https://hgdownload.soe.ucsc.edu/gbdb/hg38/uniprot/unipAliSwissprot.bb
 
 # Downloading GENCODE annotations of known ncRNAs
@@ -128,13 +126,13 @@ cat gencode.v34.annotation.gtf | grep "Mt_rRNA\|Mt_tRNA\|miRNA\|misc_RNA\|rRNA\|
 
 ### Intrinsic sequence features
 
-All features were calculated using the custom script [feature-generation.sh](bin/feature-generation.sh). GC content was calculated on command line by dividing the number of guanine and cytosine nucleotides by total sequence length.
+All features were calculated using the custom script [feature-generation.sh](bin/feature-generation.sh). GC content was calculated by dividing the number of guanine and cytosine nucleotides by total sequence length.
 
 -----------------------------------------------------------------------
 
 ### Sequence conservation features
 
-The phastCons and phyloP scores for each sequence were extracted from the UCSC phastCons and phyloP 100-way bigWig files using ```bigWigSummary``` (Haeussler et al., 2019). 
+The PhastCons and PhyloP scores for each sequence were extracted from the UCSC PhastCons and PhyloP 100-way bigWig files using ```bigWigSummary``` (Haeussler et al., 2019). 
 
 ```
 # Download PhastCons and PhyloP 100way scores
@@ -189,22 +187,22 @@ bedtools map -a input.bed -b gerp-mammals-index/gerp$chr.bed.gz -c 4,4 -o mean,m
 
 ### Transcriptome Expression features
 
-The links for the ENCODE total and small RNA-seq data (BAM files) for [primary-cell](data/encode-primary-cell-rnaseq.txt) and [tissue](data/encode-tissue-rnaseq.txt) samples are available in the [data](data/) folder (ENCODE Project Consortium, 2012), with all the RNA-seq data kept in sample specific folders. Prior to estimating the level of transcription, the BAM files need to be indexed using ```samtools index``` and the total reads per file calculated into a text file in the same folder (Li et al., 2009). Read counts were calculated using ```samtools view -c``` and maximum read depth was calculated using ```samtools depth -r``` (Li et al., 2009).
+The links for the ENCODE total and small RNA-Seq data (BAM files) for [primary-cell](data/encode-primary-cell-rnaseq.txt) and [tissue](data/encode-tissue-rnaseq.txt) samples are available in the [data](data/) folder (ENCODE Project Consortium, 2012), with all the RNA-Seq data kept in sample specific folders. Prior to estimating the level of transcription, the BAM files need to be indexed using ```samtools index``` and the total reads per file calculated into a text file in the same folder (Li et al., 2009). Read counts were calculated using ```samtools view -c``` and maximum read depth was calculated using ```samtools depth -r``` (Li et al., 2009).
 
 ```
-# Downloading ENCODE RNAseq datasets (must be done within a specified folder for each sample type)
+# Downloading ENCODE RNA-Seq datasets (must be done within a specified folder for each sample type)
 mkdir ENCODE-tissue && mkdir ENCODE-primary-cell
 xargs -L 1 curl -O -J -L < encode-tissue-rnaseq.txt         # Done within ENCODE-tissue/
 xargs -L 1 curl -O -J -L < encode-primary-cell-rnaseq.txt   # Done within ENCODE-primary-cell/
 
-# Index files and calculate total reads per RNA-seq dataset (done within each specified sample type folder)
+# Index files and calculate total reads per RNA-Seq dataset (done within each specified sample type folder)
 for file in $( ls *.bam ) ; do samtools index $file ; total=$( samtools view $file | wc -l ) ; echo $file,$total >> total-read-count.txt ; echo $file ; done
 ```
 -----------------------------------------------------------------------
 
 ### Genomic repeat associated features
 
-Prior to using ```blastn``` to estimate the number of sequence copies in the human genome, as blast database was created from the previously downloaded [GRCh38.p13 human genome](https://www.ncbi.nlm.nih.gov/genome/guide/human/) (Altschul et al., 1990; O’Leary et al., 2016). 
+Prior to using ```blastn``` to estimate the number of sequence copies in the human genome, as local blast database was created from the previously downloaded [GRCh38.p13 human genome](https://www.ncbi.nlm.nih.gov/genome/guide/human/) (Altschul et al., 1990; O’Leary et al., 2016). 
 
 ```
 # Create blast database for blastn
@@ -222,7 +220,7 @@ makeblastdb -in GCF_000001405.39_GRCh38.p13_genomic.fna -dbtype nucl -parse_seqi
 blastn -query $initial_fasta -db human_genome -evalue 0.01 -out output.csv -outfmt "10 qaccver saccver pident"
 ```
 
-Distances to the nearest repetitive element were calculated from a file of non-redundant hits of repetitive DNA elements in the human genome obtained from Dfam v3.1 (Hubley et al., 2016). Once this was converted to bed file format, the distance to the nearest hit was calculated using ```bedtools closest```  (Quinlan, 2014). 
+Distances to the nearest repetitive elements were calculated from a file of non-redundant hits of repetitive DNA elements in the human genome obtained from Dfam v3.1 (Hubley et al., 2016). Once this was converted to bed file format, the distance to the nearest hit was calculated using ```bedtools closest```  (Quinlan, 2014). 
 
 ```
 # Download Dfam non-redundent hg38 repetitive DNA elements
@@ -297,7 +295,7 @@ RNAalifold_exe -q -f S --noPS RNA.stk
 
 ##### RNA:RNA interactions
 
-Interaction energies were calculated using ```IntaRNA```, which were run against a interaction database containing [34 RNAcentral v15 ncRNAs](https://rnacentral.org/search?q=URS000013F331_9606%20OR%20URS00003D2CC9_9606%20OR%20URS000038803E_9606%20OR%20URS0000735371_9606%20OR%20URS000072E1AF_9606%20OR%20URS00006A14B6_9606%20OR%20URS000065DEBF_9606%20OR%20URS0000C8E9D4_9606%20OR%20URS0000233681_9606%20OR%20URS000047B05D_9606%20OR%20URS00001A72CE_9606%20OR%20URS0000639DBE_9606%20OR%20URS00006D74B2_9606%20OR%20URS0000659172_9606%20OR%20URS000074C9DF_9606%20OR%20URS0000733374_9606%20OR%20URS000067A424_9606%20OR%20URS000007E37F_9606%20OR%20URS000034AAC2_9606%20OR%20URS0000744456_9606%20OR%20URS0000C8E9CE_9606%20OR%20URS00000F9D45_9606%20OR%20URS00006BDF17_9606%20OR%20URS00003EE995_9606%20OR%20URS00003F07BD_9606%20OR%20URS000075BAAE_9606%20OR%20URS000035C796_9606%20OR%20URS000000A142_9606%20OR%20URS000075EF5D_9606%20OR%20URS000075ADBA_9606%20OR%20URS0000443498_9606%20OR%20URS0000103047_9606%20OR%20URS00005CF03F_9606%20OR%20URS0000007D24_9606) known to interact with a variety of RNAs (Mann et al., 2017; The RNAcentral Consortium et al., 2017). Default parameters ```-q``` query sequence and ```-t``` for target sequences were used for ```IntaRNA```.
+Interaction energies were calculated using ```IntaRNA```, which were run against a interaction database containing [34 RNAcentral v15 ncRNAs](https://rnacentral.org/search?q=URS000013F331_9606%20OR%20URS00003D2CC9_9606%20OR%20URS000038803E_9606%20OR%20URS0000735371_9606%20OR%20URS000072E1AF_9606%20OR%20URS00006A14B6_9606%20OR%20URS000065DEBF_9606%20OR%20URS0000C8E9D4_9606%20OR%20URS0000233681_9606%20OR%20URS000047B05D_9606%20OR%20URS00001A72CE_9606%20OR%20URS0000639DBE_9606%20OR%20URS00006D74B2_9606%20OR%20URS0000659172_9606%20OR%20URS000074C9DF_9606%20OR%20URS0000733374_9606%20OR%20URS000067A424_9606%20OR%20URS000007E37F_9606%20OR%20URS000034AAC2_9606%20OR%20URS0000744456_9606%20OR%20URS0000C8E9CE_9606%20OR%20URS00000F9D45_9606%20OR%20URS00006BDF17_9606%20OR%20URS00003EE995_9606%20OR%20URS00003F07BD_9606%20OR%20URS000075BAAE_9606%20OR%20URS000035C796_9606%20OR%20URS000000A142_9606%20OR%20URS000075EF5D_9606%20OR%20URS000075ADBA_9606%20OR%20URS0000443498_9606%20OR%20URS0000103047_9606%20OR%20URS00005CF03F_9606%20OR%20URS0000007D24_9606) known to interact with a variety of RNAs (Mann et al., 2017; The RNAcentral Consortium, 2019). Default parameters ```-q``` query sequence and ```-t``` for target sequences were used for ```IntaRNA```.
 
 ```
 # Remove newlines from downloaded RNAcentral fasta file
@@ -310,7 +308,7 @@ cat URS000013F331_9606_OR_URS00003D2CC9_9606_OR_URS000038803E_9606_OR_URS0000735
 
 ### Population variation features
 
-Prior to downloading the 1000 Genomes Project (1kGP) data, the chromosome coordinates were converted from hg38 to hg19 using ```liftOver``` and the hg38ToHg19.over.chain conversion file from UCSC (Haeussler et al., 2019). Population data from phase 3 of the 1kGP was obtained by downloading VCF files using ```tabix -f -h``` (The 1000 Genomes Project Consortium, 2015; Li et al., 2009). SNP type and frequencies, which were used to caluculate the average minor allele frequency, was calculated using ```vcftools``` (Danecek et al., 2011). All chromosome SNP data from the Genome Aggregation Database (gnomAD) v3 was downloaded as a local copy, with the SNPs for each region extracted using ```tabix -f -h``` (Karczewski et al. 2020; Li et al., 2009).
+Prior to downloading the 1,000 Genomes Project (1kGP) data, the chromosome coordinates were converted from hg38 to hg19 using ```liftOver``` and the hg38ToHg19.over.chain conversion file from UCSC (Haeussler et al., 2019). Population data from phase 3 of the 1kGP was obtained by downloading VCF files using ```tabix -f -h``` (The 1000 Genomes Project Consortium, 2015; Li et al., 2009). SNP frequencies, which were used to caluculate the average minor allele frequency, were calculated using ```vcftools``` (Danecek et al., 2011). All chromosome SNP data from the Genome Aggregation Database (gnomAD) v3 was downloaded as a local copy, with the SNPs for each region extracted using ```tabix -f -h``` (Karczewski et al. 2020; Li et al., 2009).
 
 ```
 # Download UCSC hg38ToHg19.over.chain conversion file
@@ -331,9 +329,9 @@ vcftools --vcf FASTA/$f --freq --out freq-afr
 ```
 -----------------------------------------------------------------------
 
-### Analysis of potential functionality predictors
+### Analysis of potential functionality features
 
-Spearman's Rho was calculated in R using the ```cor``` function and the confidence intervals were calculated using ```spearman.ci``` from the package [```spearmanCI```](https://cran.r-project.org/package=spearmanCI) 1.0. The 95% confidence intervals were specified using ```conf.level = 0.95``` and were calculated by boot-strapping 1000 times, which was specified using ```nrep=1000```.  
+Spearman's Rho was calculated in R 3.6.0 using the ```cor``` function and the confidence intervals were calculated using ```spearman.ci``` from the package [```spearmanCI```](https://cran.r-project.org/package=spearmanCI) 1.0. The 95% confidence intervals were specified using ```conf.level = 0.95``` and calculated by boot-strapping 1,000 times, which was specified using ```nrep=1000```.  
 
 RandomForest was run using [random-forest-analysis.R](bin/random-forest-analysis.R), which requires the dependecies [```randomForest```](https://cran.r-project.org/package=randomForest) 4.6-14, [```epiR```](https://cran.r-project.org/package=epiR) 1.0-15, [```pROC```](https://cran.r-project.org/package=pROC) 1.16.2 and [```mltools```](https://cran.r-project.org/package=mltools) 0.3.5 (Liaw et al., 2002; Robin et al., 2011).
 
@@ -390,6 +388,6 @@ Robin X, Turck N, Hainard A, Tiberti N, Lisacek F, Sanchez JC, Müller M. 2011. 
   
 The 1000 Genomes Project Consortium. 2015. A global reference for human genetic variation. Nature 526: 68–74. http://dx.doi.org/10.1038/nature15393.
   
-The RNAcentral Consortium, Petrov AI, Kay SJE, Kalvari I, Howe KL, Gray KA, Bruford EA, Kersey PJ, Cochrane G, Finn RD, et al. 2017. RNAcentral: a comprehensive database of non-coding RNA sequences. Nucleic Acids Res 45: D128–D134.
+The RNAcentral Consortium. 2019. RNAcentral: a hub of information for non-coding RNA sequences. Nucleic Acids Res 47: D221–D229.
 
 Yates AD, Achuthan P, Akanni W, Allen J, Allen J, Alvarez-Jarreta J, Amode MR, Armean IM, Azov AG, Bennett R, et al. 2020. Ensembl 2020. Nucleic Acids Res 48: D682–D688.
